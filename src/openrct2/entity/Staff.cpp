@@ -23,6 +23,7 @@
 #include "../object/SmallSceneryEntry.h"
 #include "../paint/tile_element/Paint.TileElement.h"
 #include "../peep/GuestPathfinding.h"
+#include "../peep/SmartPathfinding.h"
 #include "../ride/RideData.h"
 #include "../ride/TrackIteration.h"
 #include "../ride/Vehicle.h"
@@ -495,6 +496,21 @@ namespace OpenRCT2
     bool Staff::doHandymanPathFinding()
     {
         staffMowingTimeout++;
+        auto smartDirection = SmartPathfinding::HandymanDirection(*this);
+        if (DirectionValid(smartDirection))
+        {
+            auto* assignment = SmartPathfinding::GetAssignment(*this);
+            if (assignment && assignment->job == SmartPathfinding::Job::coverage && (staffOrders & STAFF_ORDERS_MOWING)
+                && staffMowingTimeout >= 12)
+            {
+                auto mowingDirection = handymanDirectionToUncutGrass(getValidPatrolDirections(nextLoc));
+                if (DirectionValid(mowingDirection))
+                    smartDirection = mowingDirection;
+            }
+            peepDirection = smartDirection;
+            setDestination(CoordsXY{ nextLoc } + CoordsDirectionDelta[smartDirection] + CoordsXY{ 16, 16 }, 3);
+            return false;
+        }
 
         Direction litterDirection = kInvalidDirection;
         uint8_t validDirections = getValidPatrolDirections(nextLoc);
@@ -1884,6 +1900,9 @@ namespace OpenRCT2
             return;
 
         if (updatePatrollingFindSweeping())
+            return;
+
+        if (getGameState().cheats.smartHandymanDispatch && updatePatrollingFindBin())
             return;
 
         if (updatePatrollingFindGrass())

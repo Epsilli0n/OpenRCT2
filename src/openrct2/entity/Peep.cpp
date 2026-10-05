@@ -38,6 +38,7 @@
 #include "../object/PeepAnimationsObject.h"
 #include "../peep/GuestPathfinding.h"
 #include "../peep/PeepActionFormat.h"
+#include "../peep/SmartPathfinding.h"
 #include "../profiling/Profiling.h"
 #include "../ride/Ride.h"
 #include "../ride/RideData.h"
@@ -1346,6 +1347,18 @@ namespace OpenRCT2
             case PeepState::picked:
                 return { PeepActionDescriptionType::pickedUp };
             case PeepState::patrolling:
+                if (auto* staff = as<Staff>())
+                {
+                    if (auto* assignment = SmartPathfinding::GetAssignment(*staff))
+                    {
+                        if (assignment->job == SmartPathfinding::Job::sweeping)
+                            return { PeepActionDescriptionType::headingToClean };
+                        if (assignment->job == SmartPathfinding::Job::emptyingBin)
+                            return { PeepActionDescriptionType::headingToEmptyBin };
+                        return { PeepActionDescriptionType::coveringNeglectedPaths };
+                    }
+                }
+                return { PeepActionDescriptionType::walking };
             case PeepState::enteringPark:
             case PeepState::leavingPark:
                 return { PeepActionDescriptionType::walking };
@@ -1947,8 +1960,7 @@ namespace OpenRCT2
 
         if (crowdCount >= kThresholdCrowdCount && guest->state == PeepState::walking && (ScenarioRand() & 0xFFFF) <= 21845)
         {
-            guest->insertNewThought(PeepThoughtType::crowded);
-            guest->happinessTarget = std::max(0, guest->happinessTarget - 14);
+            guest->applyCrowdingPenalty();
         }
 
         litterCount = std::min(kThresholdLitterCount, litterCount);

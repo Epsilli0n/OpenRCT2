@@ -3872,3 +3872,14 @@ STR_7078    :Pine green
 STR_7079    :Ruby
 STR_7080    :Deep blue
 STR_7081    :Silver
+STR_7082    :Disable guest overcrowding
+STR_7083    :Prevents overcrowding complaints and happiness penalties, and removes guest arrival limits caused by high guest numbers.
+STR_7084    :Automatic ride and shop pricing
+STR_7085    :Sets ride, shop, photo and toilet prices to the highest amount guests reliably accept. Updates daily and every few seconds for changes in value, weather and park admission. Guests still need enough cash. Turning this off leaves the current prices in place.
+STR_7086    :Smart guest navigation
+STR_7087    :Guests consider destinations throughout the park and follow complete routes to reachable rides, facilities and exits. Routes respect path heights, queues and no-entry signs, and refresh when paths change.
+STR_7088    :Smart handyman dispatch
+STR_7089    :Handymen reserve reachable litter and full-bin jobs, then visit neglected paths. Shared coverage history and regional assignments spread staff throughout their patrol areas. Normal duties and cleaning speed still apply.
+STR_7090    :Heading to clean litter
+STR_7091    :Heading to empty a full bin
+STR_7092    :Visiting neglected paths

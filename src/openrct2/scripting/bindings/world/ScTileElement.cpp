@@ -12,6 +12,7 @@
     #include "ScTileElement.hpp"
 
     #include "../../../Context.h"
+    #include "../../../GameState.h"
     #include "../../../drawing/TextColour.h"
     #include "../../../object/PathAdditionEntry.h"
     #include "../../../object/WallSceneryEntry.h"
@@ -116,6 +117,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(newBaseHeight, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         data->element->baseHeight = newBaseHeight;
         Invalidate(data);
@@ -132,6 +134,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         data->element->setBaseZ(value);
         Invalidate(data);
@@ -148,6 +151,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(newClearanceHeight, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         data->element->clearanceHeight = newClearanceHeight;
         Invalidate(data);
@@ -164,6 +168,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         data->element->setClearanceZ(value);
         Invalidate(data);
@@ -199,6 +204,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
         const auto type = element->getType();
@@ -242,6 +248,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_INT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asSurface();
         if (el == nullptr)
@@ -275,6 +282,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asSurface();
         if (el == nullptr)
@@ -308,6 +316,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asSurface();
         if (el == nullptr)
@@ -341,6 +350,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asSurface();
         if (el == nullptr)
@@ -408,6 +418,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asSurface();
         if (el == nullptr)
@@ -443,6 +454,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asSurface();
         if (el == nullptr)
@@ -475,6 +487,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asTrack();
         if (el == nullptr)
@@ -508,6 +521,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
 
         if (value >= RIDE_TYPE_COUNT)
         {
@@ -578,6 +592,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
 
@@ -674,6 +689,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::ride_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
 
@@ -805,6 +821,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::station_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
 
@@ -886,6 +903,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asTrack();
         if (el == nullptr)
@@ -932,6 +950,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::mazeEntry_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
 
         if (!JS_IsNumber(jsValue))
         {
@@ -1003,6 +1022,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::colourScheme_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
 
         if (!JS_IsNumber(jsValue))
         {
@@ -1074,6 +1094,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::seatRotation_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
 
         if (!JS_IsNumber(jsValue))
         {
@@ -1136,6 +1157,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::brakeBoosterSpeed_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
 
         if (!JS_IsNumber(jsValue))
         {
@@ -1185,6 +1207,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asTrack();
         if (el == nullptr)
@@ -1218,6 +1241,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asTrack();
         if (el == nullptr)
@@ -1245,6 +1269,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto el = data->element->asTrack();
         if (el != nullptr)
@@ -1303,6 +1328,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::object_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
 
@@ -1380,6 +1406,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(hide, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         data->element->setInvisible(hide);
         Invalidate(data);
@@ -1399,6 +1426,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asSmallScenery();
         if (el != nullptr)
@@ -1422,6 +1450,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asSmallScenery();
         if (el != nullptr)
@@ -1441,6 +1470,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         data->element->setOccupiedQuadrants(value);
         Invalidate(data);
@@ -1456,6 +1486,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         data->element->setGhost(value);
         Invalidate(data);
@@ -1496,6 +1527,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
         switch (element->getType())
@@ -1568,6 +1600,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
         switch (element->getType())
@@ -1635,6 +1668,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
         switch (element->getType())
@@ -1678,6 +1712,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::bannerIndex_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
         switch (element->getType())
@@ -1739,6 +1774,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -1762,6 +1798,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -1785,6 +1822,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -1807,6 +1845,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::slopeDirection_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -1840,6 +1879,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -1862,6 +1902,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::queueBannerDirection_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -1895,6 +1936,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -1918,6 +1960,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -1949,6 +1992,7 @@ namespace OpenRCT2::Scripting
         if (JS_IsNumber(jsValue))
         {
             JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            SmartPathfinding::Invalidate(getGameState());
             auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
             auto element = data->element;
             if (element->getType() == TileElementType::path)
@@ -1983,6 +2027,7 @@ namespace OpenRCT2::Scripting
         if (JS_IsNumber(jsValue))
         {
             JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            SmartPathfinding::Invalidate(getGameState());
             auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
             auto element = data->element;
             if (element->getType() == TileElementType::path)
@@ -2008,6 +2053,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTileElement::addition_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asPath();
         if (el != nullptr)
@@ -2043,6 +2089,7 @@ namespace OpenRCT2::Scripting
         if (JS_IsNumber(jsValue))
         {
             JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            SmartPathfinding::Invalidate(getGameState());
             auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
             auto* el = data->element->asPath();
             if (el != nullptr)
@@ -2072,6 +2119,7 @@ namespace OpenRCT2::Scripting
         if (JS_IsBool(jsValue))
         {
             JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            SmartPathfinding::Invalidate(getGameState());
             auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
             auto* el = data->element->asPath();
             if (el != nullptr)
@@ -2123,6 +2171,7 @@ namespace OpenRCT2::Scripting
         if (JS_IsBool(jsValue))
         {
             JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            SmartPathfinding::Invalidate(getGameState());
             auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
             auto* el = data->element->asPath();
             if (el != nullptr)
@@ -2154,6 +2203,7 @@ namespace OpenRCT2::Scripting
         if (JS_IsNumber(jsValue))
         {
             JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            SmartPathfinding::Invalidate(getGameState());
             auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
             auto* el = data->element->asEntrance();
             if (el != nullptr)
@@ -2186,6 +2236,7 @@ namespace OpenRCT2::Scripting
         if (JS_IsNumber(jsValue))
         {
             JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            SmartPathfinding::Invalidate(getGameState());
             auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
             auto* el = data->element->asEntrance();
             if (el != nullptr)
@@ -2224,6 +2275,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_UINT32(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
         switch (element->getType())
@@ -2262,6 +2314,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_STR(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto element = data->element;
         BannerIndex idx = element->getBannerIndex();
@@ -2295,6 +2348,7 @@ namespace OpenRCT2::Scripting
     {
         JS_UNPACK_BOOL(value, ctx, jsValue);
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         auto data = gScTileElement.GetOpaque<OpaqueTileElementData*>(thisValue);
         auto* el = data->element->asBanner();
         if (el != nullptr)

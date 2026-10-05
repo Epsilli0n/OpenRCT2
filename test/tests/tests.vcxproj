@@ -101,6 +101,8 @@
     <ClCompile Include="Pathfinding.cpp" />
     <ClCompile Include="RideRatings.cpp" />
     <ClCompile Include="EntityImportTests.cpp" />
+    <ClCompile Include="AutomaticPricingTests.cpp" />
+    <ClCompile Include="SmartPathfindingTests.cpp" />
     <ClCompile Include="S6ImportExportTests.cpp" />
     <ClCompile Include="SawyerCodingTest.cpp" />
     <ClCompile Include="ScenarioPatcherTests.cpp" />

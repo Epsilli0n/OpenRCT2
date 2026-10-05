@@ -32,7 +32,6 @@
 #include "../management/Marketing.h"
 #include "../management/NewsItem.h"
 #include "../network/Network.h"
-#include "../object/ClimateObject.h"
 #include "../object/LargeSceneryEntry.h"
 #include "../object/MusicObject.h"
 #include "../object/ObjectManager.h"
@@ -42,6 +41,7 @@
 #include "../peep/PeepAnimations.h"
 #include "../peep/PeepThoughts.h"
 #include "../peep/RideUseSystem.h"
+#include "../peep/SmartPathfinding.h"
 #include "../ride/Ride.h"
 #include "../ride/RideData.h"
 #include "../ride/RideManager.hpp"
@@ -1330,6 +1330,8 @@ namespace OpenRCT2
      */
     void Guest::checkIfLost()
     {
+        if (getGameState().cheats.smartGuestNavigation && headingForRideOrParkExit() && guestIsLostCountdown > 90)
+            return;
         if (!peepFlags.has(PeepFlag::lost))
         {
             if (RideGetCount() < 2)
@@ -1402,24 +1404,6 @@ namespace OpenRCT2
 
         if (--guestIsLostCountdown == 0)
             guestIsLostCountdown = 90;
-    }
-
-    static money64 getItemValue(const ShopItemDescriptor& shopItemDescriptor)
-    {
-        auto& objManager = GetContext()->GetObjectManager();
-        auto* climateObj = objManager.GetLoadedObject<ClimateObject>(0);
-        if (climateObj == nullptr)
-            return shopItemDescriptor.BaseValue;
-
-        const auto& thresholds = climateObj->getItemThresholds();
-        const auto& gameState = getGameState();
-
-        if (gameState.weatherCurrent.temperature >= thresholds.warm)
-            return shopItemDescriptor.HotValue;
-        else if (gameState.weatherCurrent.temperature <= thresholds.cold)
-            return shopItemDescriptor.ColdValue;
-        else
-            return shopItemDescriptor.BaseValue;
     }
 
     /** Main logic to decide whether a peep should buy an item in question
@@ -1514,7 +1498,7 @@ namespace OpenRCT2
                 }
             }
 
-            money64 itemValue = getItemValue(shopItemDescriptor);
+            money64 itemValue = shopItemDescriptor.GetValue();
             if (itemValue < price)
             {
                 itemValue -= price;
@@ -1556,7 +1540,7 @@ namespace OpenRCT2
             }
 
             // reset itemValue for satisfaction calculation
-            itemValue = getItemValue(shopItemDescriptor);
+            itemValue = shopItemDescriptor.GetValue();
             itemValue -= price;
             uint8_t satisfaction = 0;
             if (itemValue > -8)
@@ -1796,7 +1780,7 @@ namespace OpenRCT2
         // FIX  Originally checked for a toy, likely a mistake and should be a map,
         //      but then again this seems to only allow the peep to go on
         //      rides they haven't been on before.
-        if (guest.hasItem(ShopItem::map))
+        if (getGameState().cheats.smartGuestNavigation || guest.hasItem(ShopItem::map))
         {
             // Consider rides that peep hasn't been on yet
             auto& gameState = getGameState();
@@ -1866,7 +1850,9 @@ namespace OpenRCT2
                     {
                         if (mostExcitingRide == nullptr || ride.ratings.excitement > mostExcitingRide->ratings.excitement)
                         {
-                            mostExcitingRide = &ride;
+                            if (!gameState.cheats.smartGuestNavigation
+                                || SmartPathfinding::RideDistance(guest, ride) != SmartPathfinding::kUnreachable)
+                                mostExcitingRide = &ride;
                         }
                     }
                 }
@@ -3106,7 +3092,7 @@ namespace OpenRCT2
         }
 
         OpenRCT2::BitSet<Limits::kMaxRidesInPark> rideConsideration;
-        if (!considerOnlyCloseRides && (guest.hasItem(ShopItem::map)))
+        if (getGameState().cheats.smartGuestNavigation || (!considerOnlyCloseRides && guest.hasItem(ShopItem::map)))
         {
             // Consider all rides in the park
             auto& gameState = getGameState();
@@ -3169,14 +3155,16 @@ namespace OpenRCT2
 
         // Pick the closest ride
         Ride* closestRide{};
-        auto closestRideDistance = std::numeric_limits<int32_t>::max();
+        auto closestRideDistance = SmartPathfinding::kUnreachable;
         for (size_t i = 0; i < numPotentialRides; i++)
         {
             auto ride = GetRide(potentialRides[i]);
             if (ride != nullptr)
             {
                 auto rideLocation = ride->getStation().start;
-                int32_t distance = abs(rideLocation.x - guest.x) + abs(rideLocation.y - guest.y);
+                auto distance = getGameState().cheats.smartGuestNavigation
+                    ? SmartPathfinding::RideDistance(guest, *ride)
+                    : static_cast<uint32_t>(abs(rideLocation.x - guest.x) + abs(rideLocation.y - guest.y));
                 if (distance < closestRideDistance)
                 {
                     closestRide = ride;
@@ -7003,6 +6991,11 @@ namespace OpenRCT2
      */
     void Guest::insertNewThought(PeepThoughtType thoughtType, uint16_t thoughtArguments)
     {
+        if (thoughtType == PeepThoughtType::crowded && getGameState().cheats.disableGuestCrowding)
+        {
+            return;
+        }
+
         PeepActionType newAction = PeepThoughtToActionMap[EnumValue(thoughtType)].action;
         if (newAction != PeepActionType::walking && isActionInterruptableSafely())
         {
@@ -7041,6 +7034,17 @@ namespace OpenRCT2
         thought.fresh_timeout = 0;
 
         windowInvalidateFlags |= PEEP_INVALIDATE_PEEP_THOUGHTS;
+    }
+
+    void Guest::applyCrowdingPenalty()
+    {
+        if (getGameState().cheats.disableGuestCrowding)
+        {
+            return;
+        }
+
+        insertNewThought(PeepThoughtType::crowded);
+        happinessTarget = std::max(0, happinessTarget - 14);
     }
 
     // clang-format off

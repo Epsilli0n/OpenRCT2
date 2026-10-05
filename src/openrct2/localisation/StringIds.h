@@ -1795,6 +1795,14 @@ enum : StringId
     STR_GUESTS_LEAVING_PARK = 7062,
     STR_GUESTS_WATCHING_NEW_RIDE_BEING_CONSTRUCTED = 7063,
 
+    STR_CHEAT_DISABLE_GUEST_CROWDING = 7082,
+    STR_CHEAT_AUTOMATIC_PRICING = 7084,
+    STR_CHEAT_SMART_GUEST_NAVIGATION = 7086,
+    STR_CHEAT_SMART_HANDYMAN_DISPATCH = 7088,
+    STR_STAFF_HEADING_TO_CLEAN = 7090,
+    STR_STAFF_HEADING_TO_EMPTY_BIN = 7091,
+    STR_STAFF_COVERING_NEGLECTED_PATHS = 7092,
+
     // Have to include resource strings (from scenarios and objects) for the time being now that language is partially working
     /* MAX_STR_COUNT = 32768 */ // MAX_STR_COUNT - upper limit for number of strings, not the current count strings
 };

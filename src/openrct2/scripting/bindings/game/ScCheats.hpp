@@ -39,6 +39,11 @@ namespace OpenRCT2::Scripting
                     "allowTrackPlaceInvalidHeights", &ScCheats::allowTrackPlaceInvalidHeights_get,
                     &ScCheats::allowTrackPlaceInvalidHeights_set),
                 JS_CGETSET_DEF("buildInPauseMode", &ScCheats::buildInPauseMode_get, &ScCheats::buildInPauseMode_set),
+                JS_CGETSET_DEF("automaticPricing", &ScCheats::automaticPricing_get, &ScCheats::automaticPricing_set),
+                JS_CGETSET_DEF(
+                    "smartGuestNavigation", &ScCheats::smartGuestNavigation_get, &ScCheats::smartGuestNavigation_set),
+                JS_CGETSET_DEF(
+                    "smartHandymanDispatch", &ScCheats::smartHandymanDispatch_get, &ScCheats::smartHandymanDispatch_set),
                 JS_CGETSET_DEF(
                     "disableAllBreakdowns", &ScCheats::disableAllBreakdowns_get, &ScCheats::disableAllBreakdowns_set),
                 JS_CGETSET_DEF(
@@ -46,6 +51,8 @@ namespace OpenRCT2::Scripting
                 JS_CGETSET_DEF(
                     "disableClearanceChecks", &ScCheats::disableClearanceChecks_get, &ScCheats::disableClearanceChecks_set),
                 JS_CGETSET_DEF("disableLittering", &ScCheats::disableLittering_get, &ScCheats::disableLittering_set),
+                JS_CGETSET_DEF(
+                    "disableGuestCrowding", &ScCheats::disableGuestCrowding_get, &ScCheats::disableGuestCrowding_set),
                 JS_CGETSET_DEF("disablePlantAging", &ScCheats::disablePlantAging_get, &ScCheats::disablePlantAging_set),
                 JS_CGETSET_DEF("disableGrassGrowing", &ScCheats::disableGrassGrowing_get, &ScCheats::disableGrassGrowing_set),
                 JS_CGETSET_DEF(
@@ -87,6 +94,44 @@ namespace OpenRCT2::Scripting
         }
 
     private:
+        static JSValue smartGuestNavigation_get(JSContext* ctx, JSValue thisVal)
+        {
+            return JS_NewBool(ctx, getGameState().cheats.smartGuestNavigation);
+        }
+        static JSValue smartGuestNavigation_set(JSContext* ctx, JSValue thisVal, JSValue value)
+        {
+            JS_UNPACK_BOOL(valueBool, ctx, value);
+            JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            getGameState().cheats.smartGuestNavigation = valueBool;
+            SmartPathfinding::Invalidate(getGameState());
+            return JS_UNDEFINED;
+        }
+        static JSValue smartHandymanDispatch_get(JSContext* ctx, JSValue thisVal)
+        {
+            return JS_NewBool(ctx, getGameState().cheats.smartHandymanDispatch);
+        }
+        static JSValue smartHandymanDispatch_set(JSContext* ctx, JSValue thisVal, JSValue value)
+        {
+            JS_UNPACK_BOOL(valueBool, ctx, value);
+            JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            getGameState().cheats.smartHandymanDispatch = valueBool;
+            SmartPathfinding::Reset(getGameState());
+            return JS_UNDEFINED;
+        }
+        static JSValue automaticPricing_get(JSContext* ctx, JSValue thisVal)
+        {
+            return JS_NewBool(ctx, getGameState().cheats.automaticPricing);
+        }
+
+        static JSValue automaticPricing_set(JSContext* ctx, JSValue thisVal, JSValue value)
+        {
+            JS_UNPACK_BOOL(valueBool, ctx, value);
+            JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            getGameState().cheats.automaticPricing = valueBool;
+            CheatsUpdateAutomaticPrices(true);
+            return JS_UNDEFINED;
+        }
+
         static JSValue allowArbitraryRideTypeChanges_get(JSContext* ctx, JSValue thisVal)
         {
             return JS_NewBool(ctx, getGameState().cheats.allowArbitraryRideTypeChanges);
@@ -181,6 +226,24 @@ namespace OpenRCT2::Scripting
             JS_UNPACK_BOOL(valueBool, ctx, value);
             JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
             getGameState().cheats.disableLittering = valueBool;
+
+            return JS_UNDEFINED;
+        }
+
+        static JSValue disableGuestCrowding_get(JSContext* ctx, JSValue thisVal)
+        {
+            return JS_NewBool(ctx, getGameState().cheats.disableGuestCrowding);
+        }
+
+        static JSValue disableGuestCrowding_set(JSContext* ctx, JSValue thisVal, JSValue value)
+        {
+            JS_UNPACK_BOOL(valueBool, ctx, value);
+            JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+            getGameState().cheats.disableGuestCrowding = valueBool;
+            if (valueBool)
+            {
+                CheatsClearGuestCrowdingThoughts();
+            }
 
             return JS_UNDEFINED;
         }

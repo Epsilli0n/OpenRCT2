@@ -13,11 +13,126 @@
 #include "actions/GameActionRunner.h"
 #include "actions/cheats/CheatSetAction.h"
 #include "core/DataSerialiser.h"
+#include "entity/EntityList.h"
+#include "entity/Guest.h"
+#include "ride/RideData.h"
+#include "ride/RideEntry.h"
+#include "ride/RideManager.hpp"
+#include "ride/ShopItem.h"
+#include "ui/WindowManager.h"
+#include "world/Park.h"
 
 using namespace OpenRCT2;
 
 // TODO: Refactor this. Cheat variables should contain the cheat type
 // and a serialisation method.
+
+void CheatsClearGuestCrowdingThoughts()
+{
+    for (auto* guest : EntityList<Guest>())
+    {
+        bool removedThought = false;
+        auto destination = guest->thoughts.begin();
+
+        for (auto source = guest->thoughts.begin(); source != guest->thoughts.end(); ++source)
+        {
+            if (source->type == PeepThoughtType::none)
+                break;
+
+            if (source->type == PeepThoughtType::crowded)
+            {
+                removedThought = true;
+                continue;
+            }
+
+            *destination++ = *source;
+        }
+
+        if (removedThought)
+        {
+            for (; destination != guest->thoughts.end(); ++destination)
+            {
+                destination->type = PeepThoughtType::none;
+            }
+            guest->windowInvalidateFlags |= PEEP_INVALIDATE_PEEP_THOUGHTS;
+        }
+    }
+}
+
+void CheatsUpdateAutomaticPrices(bool force)
+{
+    auto& gameState = getGameState();
+    const auto& park = gameState.park;
+    if (!gameState.cheats.automaticPricing || park.flags.has(ParkFlag::noMoney))
+        return;
+    // Refresh every day and every 128 ticks (about four seconds at normal speed).
+    if (!force && !gameState.date.IsDayStart() && gameState.currentTicks % 128 != 0)
+        return;
+
+    // Existing guests retain this flag even after the entrance fee is removed.
+    bool paidEntry = Park::GetEntranceFee(park) != 0;
+    if (!paidEntry)
+    {
+        for (const auto* guest : EntityList<Guest>())
+        {
+            if (!guest->outsideOfPark && guest->peepFlags.has(PeepFlag::hasPaidForParkEntry))
+            {
+                paidEntry = true;
+                break;
+            }
+        }
+    }
+
+    auto* windowMgr = Ui::GetWindowManager();
+    for (auto& ride : RideManager(gameState))
+    {
+        const auto* entry = ride.getRideEntry();
+        if (entry == nullptr)
+            continue;
+
+        bool changed = false;
+        auto setPrice = [&](size_t index, money64 price) {
+            price = std::clamp(price, kRideMinPrice, kRideMaxPrice);
+            if (ride.price[index] != price)
+            {
+                ride.price[index] = price;
+                changed = true;
+            }
+        };
+
+        const auto& rtd = ride.getRideTypeDescriptor();
+        if (rtd.specialType == RtdSpecialType::toilet)
+        {
+            // The least urgent eligible guest has a toilet stat of 70, and
+            // rejects prices whose internal money value multiplied by 40 exceeds it.
+            setPrice(0, 0.10_GBP);
+        }
+        else if (entry->shop_item[0] != ShopItem::none)
+        {
+            setPrice(0, GetShopItemDescriptor(entry->shop_item[0]).GetValue());
+        }
+        else if (ride.isRide() && Park::RidePricesUnlocked(park) && ride.value != kRideValueUndefined)
+        {
+            // Preserve integer rounding used by guests who paid park admission.
+            auto value = paidEntry ? ride.value / 4 : ride.value;
+            setPrice(0, std::clamp(value, 0.00_GBP, kRideMaxPrice / 2) * 2);
+        }
+
+        auto secondaryItem = ride.flags.has(RideFlag::onRidePhoto) ? rtd.PhotoItem : entry->shop_item[1];
+        if (secondaryItem != ShopItem::none)
+        {
+            setPrice(1, GetShopItemDescriptor(secondaryItem).GetValue());
+        }
+
+        // Prices for shared shop items use the same value, so the park's
+        // "same price throughout park" setting remains consistent.
+        if (changed)
+        {
+            ride.windowInvalidateFlags.set(RideInvalidateFlag::income);
+            windowMgr->InvalidateByNumber(WindowClass::ride, ride.id.ToUnderlying());
+        }
+    }
+}
 
 void CheatsReset()
 {
@@ -35,6 +150,11 @@ void CheatsReset()
     gameState.cheats.buildInPauseMode = false;
     gameState.cheats.ignoreRideIntensity = false;
     gameState.cheats.ignorePrice = false;
+    gameState.cheats.disableGuestCrowding = false;
+    gameState.cheats.automaticPricing = false;
+    gameState.cheats.smartGuestNavigation = false;
+    gameState.cheats.smartHandymanDispatch = false;
+    SmartPathfinding::Reset(gameState);
     gameState.cheats.disableVandalism = false;
     gameState.cheats.disableLittering = false;
     gameState.cheats.neverendingMarketing = false;
@@ -111,6 +231,10 @@ void CheatsSerialise(DataSerialiser& ds)
         CheatEntrySerialise(ds, CheatType::setStaffSpeed, gameState.cheats.selectedStaffSpeed, count);
         CheatEntrySerialise(ds, CheatType::ignorePrice, gameState.cheats.ignorePrice, count);
         CheatEntrySerialise(ds, CheatType::setForcedParkRating, gameState.cheats.forcedParkRating, count);
+        CheatEntrySerialise(ds, CheatType::disableGuestCrowding, gameState.cheats.disableGuestCrowding, count);
+        CheatEntrySerialise(ds, CheatType::automaticPricing, gameState.cheats.automaticPricing, count);
+        CheatEntrySerialise(ds, CheatType::smartGuestNavigation, gameState.cheats.smartGuestNavigation, count);
+        CheatEntrySerialise(ds, CheatType::smartHandymanDispatch, gameState.cheats.smartHandymanDispatch, count);
 
         // Remember current position and update count.
         uint64_t endOffset = stream.GetPosition();
@@ -123,6 +247,12 @@ void CheatsSerialise(DataSerialiser& ds)
     }
     else
     {
+        // Older saves do not contain this cheat.
+        gameState.cheats.disableGuestCrowding = false;
+        gameState.cheats.automaticPricing = false;
+        gameState.cheats.smartGuestNavigation = false;
+        gameState.cheats.smartHandymanDispatch = false;
+        SmartPathfinding::Reset(gameState);
         ds << count;
 
         for (uint16_t i = 0; i < count; i++)
@@ -172,6 +302,18 @@ void CheatsSerialise(DataSerialiser& ds)
                     break;
                 case CheatType::disableLittering:
                     ds << gameState.cheats.disableLittering;
+                    break;
+                case CheatType::disableGuestCrowding:
+                    ds << gameState.cheats.disableGuestCrowding;
+                    break;
+                case CheatType::automaticPricing:
+                    ds << gameState.cheats.automaticPricing;
+                    break;
+                case CheatType::smartGuestNavigation:
+                    ds << gameState.cheats.smartGuestNavigation;
+                    break;
+                case CheatType::smartHandymanDispatch:
+                    ds << gameState.cheats.smartHandymanDispatch;
                     break;
                 case CheatType::neverendingMarketing:
                     ds << gameState.cheats.neverendingMarketing;
@@ -228,6 +370,11 @@ void CheatsSerialise(DataSerialiser& ds)
                     break;
             }
         }
+
+        if (gameState.cheats.disableGuestCrowding)
+        {
+            CheatsClearGuestCrowdingThoughts();
+        }
     }
 }
 
@@ -265,6 +412,14 @@ const char* CheatsGetName(CheatType cheatType)
             return LanguageGetString(STR_CHEAT_DISABLE_VANDALISM);
         case CheatType::disableLittering:
             return LanguageGetString(STR_CHEAT_DISABLE_LITTERING);
+        case CheatType::disableGuestCrowding:
+            return LanguageGetString(STR_CHEAT_DISABLE_GUEST_CROWDING);
+        case CheatType::automaticPricing:
+            return LanguageGetString(STR_CHEAT_AUTOMATIC_PRICING);
+        case CheatType::smartGuestNavigation:
+            return LanguageGetString(STR_CHEAT_SMART_GUEST_NAVIGATION);
+        case CheatType::smartHandymanDispatch:
+            return LanguageGetString(STR_CHEAT_SMART_HANDYMAN_DISPATCH);
         case CheatType::noMoney:
             return LanguageGetString(STR_MAKE_PARK_NO_MONEY);
         case CheatType::addMoney:

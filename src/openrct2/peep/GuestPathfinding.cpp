@@ -26,6 +26,7 @@
 #include "../world/tile_element/PathElement.h"
 #include "../world/tile_element/TileElement.h"
 #include "../world/tile_element/TrackElement.h"
+#include "SmartPathfinding.h"
 
 #include <cassert>
 #include <cstring>
@@ -186,7 +187,7 @@ namespace OpenRCT2::PathFinding
     /**
      * Gets the connected edges of a path that are permitted (i.e. no 'no entry' signs)
      */
-    static int32_t PathGetPermittedEdges(bool ignoreBanners, const PathElement* pathElement)
+    int32_t GetPermittedEdges(bool ignoreBanners, const PathElement* pathElement)
     {
         return BannerClearPathEdges(ignoreBanners, pathElement, pathElement->getEdgesAndCorners()) & 0x0F;
     }
@@ -454,7 +455,7 @@ namespace OpenRCT2::PathFinding
                     if (tileElement->asPath()->isWide())
                         return PathSearchResult::wide;
 
-                    uint8_t edges = PathGetPermittedEdges(ignoreBanners, pathElement);
+                    uint8_t edges = GetPermittedEdges(ignoreBanners, pathElement);
                     edges &= ~(1 << DirectionReverse(chosenDirection));
                     loc.z = tileElement->baseHeight;
 
@@ -989,7 +990,7 @@ namespace OpenRCT2::PathFinding
 
             /* Get all the permitted_edges of the map element. */
             Guard::Assert(tileElement->asPath() != nullptr);
-            uint32_t edges = PathGetPermittedEdges(staff != nullptr, tileElement->asPath());
+            uint32_t edges = GetPermittedEdges(staff != nullptr, tileElement->asPath());
 
             LogPathfinding(
                 &peep, "Path element at %d,%d,%d; Steps: %u; Edges (0123):%d%d%d%d; Reverse: %d", loc.x >> 5, loc.y >> 5, loc.z,
@@ -1226,6 +1227,9 @@ namespace OpenRCT2::PathFinding
     {
         PROFILED_FUNCTION();
 
+        if (auto* guest = peep.as<Guest>(); guest && getGameState().cheats.smartGuestNavigation)
+            return SmartPathfinding::GuestDirection(loc, goal, *guest, ignoreForeignQueues, queueRideIndex);
+
         PathFindingState state{};
 
         state.ignoreForeignQueues = ignoreForeignQueues;
@@ -1285,7 +1289,7 @@ namespace OpenRCT2::PathFinding
             isThin = isThin || PathIsThinJunction(destTileElement->asPath(), loc);
 
             // Collect the permitted edges of ALL matching path elements at this location.
-            permittedEdges |= PathGetPermittedEdges(peep.is<Staff>(), destTileElement->asPath());
+            permittedEdges |= GetPermittedEdges(peep.is<Staff>(), destTileElement->asPath());
         } while (!(destTileElement++)->isLastForTile());
         // Peep is not on a path.
         if (!found)
@@ -1658,6 +1662,27 @@ namespace OpenRCT2::PathFinding
     int32_t GuestPathFindParkEntranceLeaving(Peep& peep, uint8_t edges)
     {
         TileCoordsXYZ entranceGoal{};
+        if (getGameState().cheats.smartGuestNavigation)
+        {
+            uint32_t best = SmartPathfinding::kUnreachable;
+            for (const auto& entrance : getGameState().park.entrances)
+            {
+                auto goal = TileCoordsXYZ(entrance);
+                auto distance = SmartPathfinding::Distance(TileCoordsXYZ(peep.nextLoc), goal, true, RideId::GetNull());
+                if (distance < best)
+                {
+                    best = distance;
+                    entranceGoal = goal;
+                }
+            }
+            if (best != SmartPathfinding::kUnreachable)
+            {
+                auto direction = ChooseDirection(TileCoordsXYZ(peep.nextLoc), entranceGoal, peep, true, RideId::GetNull());
+                if (DirectionValid(direction))
+                    return PeepMoveOneTile(direction, peep);
+            }
+            return GuestPathfindAimless(peep, edges);
+        }
         if (peep.peepFlags.has(PeepFlag::parkEntranceChosen))
         {
             entranceGoal = peep.pathfindGoal;
@@ -1842,6 +1867,21 @@ namespace OpenRCT2::PathFinding
      * to the station. Consequently a truly random station selection here is not
      * appropriate.
      */
+    TileCoordsXYZ GetRideGoal(const Ride& ride, const RideStation& station)
+    {
+        TileCoordsXYZ goal;
+        if (station.entrance.isNull())
+        {
+            goal = { TileCoordsXY(station.start), station.height };
+        }
+        else
+        {
+            goal = station.entrance;
+        }
+        GetRideQueueEnd(goal);
+        return goal;
+    }
+
     static StationIndex GuestPathfindingSelectRandomStation(
         const Guest& guest, int32_t numEntranceStations, BitSet<Limits::kMaxStationsPerRide>& entranceStations)
     {
@@ -1890,14 +1930,48 @@ namespace OpenRCT2::PathFinding
         }
 
         // Because this function is called for guests only, never ignore banners.
-        uint32_t edges = PathGetPermittedEdges(false, pathElement);
+        uint32_t edges = GetPermittedEdges(false, pathElement);
 
         if (edges == 0)
         {
             return GuestSurfacePathFinding(peep);
         }
 
-        if (!peep.outsideOfPark && peep.headingForRideOrParkExit())
+        if (getGameState().cheats.smartGuestNavigation && !peep.outsideOfPark)
+        {
+            if (peep.peepFlags.has(PeepFlag::leavingPark))
+                return GuestPathFindParkEntranceLeaving(peep, edges);
+            auto* ride = GetRide(peep.guestHeadingToRideId);
+            if (ride && ride->status == RideStatus::open)
+            {
+                uint32_t bestDistance = SmartPathfinding::kUnreachable;
+                TileCoordsXYZ goal;
+                for (const auto& station : ride->getStations())
+                {
+                    if (station.entrance.isNull() && ride->getStationIndex(&station).ToUnderlying() != 0)
+                        continue;
+                    auto candidate = GetRideGoal(*ride, station);
+                    auto distance = SmartPathfinding::Distance(loc, candidate, true, ride->id);
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        goal = candidate;
+                    }
+                }
+                if (bestDistance != SmartPathfinding::kUnreachable)
+                {
+                    auto chosen = ChooseDirection(loc, goal, peep, true, ride->id);
+                    if (DirectionValid(chosen))
+                        return PeepMoveOneTile(chosen, peep);
+                }
+                // Stop repeatedly pursuing a destination with no connected route.
+                peep.guestHeadingToRideId = RideId::GetNull();
+                peep.resetPathfindGoal();
+                peep.windowInvalidateFlags |= PEEP_INVALIDATE_PEEP_ACTION;
+            }
+        }
+
+        if (!getGameState().cheats.smartGuestNavigation && !peep.outsideOfPark && peep.headingForRideOrParkExit())
         {
             /* If this tileElement is adjacent to any non-wide paths,
              * remove all of the edges to wide paths. */

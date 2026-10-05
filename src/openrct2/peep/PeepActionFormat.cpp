@@ -46,6 +46,9 @@ namespace OpenRCT2
         { STR_FIXING_RIDE, kStringIdEmpty },                       // fixingRide
         { STR_ANSWERING_RADIO_CALL, kStringIdEmpty },              // answeringRadioCall
         { STR_RESPONDING_TO_RIDE_BREAKDOWN_CALL, kStringIdEmpty }, // respondingToBreakdownCall
+        { STR_STAFF_HEADING_TO_CLEAN, kStringIdEmpty },
+        { STR_STAFF_HEADING_TO_EMPTY_BIN, kStringIdEmpty },
+        { STR_STAFF_COVERING_NEGLECTED_PATHS, kStringIdEmpty },
     });
     static_assert(std::size(kPeepActionToStringMapping) == kNumPeepActionDescriptionTypes);
 

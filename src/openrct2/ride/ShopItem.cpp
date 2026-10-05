@@ -9,10 +9,13 @@
 
 #include "ShopItem.h"
 
+#include "../Context.h"
 #include "../GameState.h"
 #include "../SpriteIds.h"
 #include "../entity/Guest.h"
 #include "../localisation/StringIds.h"
+#include "../object/ClimateObject.h"
+#include "../object/ObjectManager.h"
 #include "../ride/RideEntry.h"
 #include "../ride/RideManager.hpp"
 
@@ -149,6 +152,22 @@ money64 ShopItemGetCommonPrice(Ride* forRide, const ShopItem shopItem)
 bool ShopItemHasCommonPrice(const ShopItem shopItem)
 {
     return ShopItems(getGameState().park.samePriceThroughoutPark).has(shopItem);
+}
+
+money64 ShopItemDescriptor::GetValue() const
+{
+    auto& objManager = GetContext()->GetObjectManager();
+    auto* climateObj = objManager.GetLoadedObject<ClimateObject>(0);
+    if (climateObj == nullptr)
+        return BaseValue;
+
+    const auto& thresholds = climateObj->getItemThresholds();
+    const auto temperature = getGameState().weatherCurrent.temperature;
+    if (temperature >= thresholds.warm)
+        return HotValue;
+    if (temperature <= thresholds.cold)
+        return ColdValue;
+    return BaseValue;
 }
 
 bool ShopItemDescriptor::IsFood() const

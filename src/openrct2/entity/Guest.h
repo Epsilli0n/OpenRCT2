@@ -379,6 +379,7 @@ namespace OpenRCT2
         void insertNewThought(PeepThoughtType thought_type, ShopItem thought_arguments);
         void insertNewThought(PeepThoughtType thought_type, RideId rideId);
         void insertNewThought(PeepThoughtType thought_type, uint16_t thought_arguments);
+        void applyCrowdingPenalty();
         static Guest* generate(const CoordsXYZ& coords);
         bool updateQueuePosition(PeepActionType previous_action);
         void removeFromQueue();

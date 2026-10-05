@@ -328,6 +328,9 @@ namespace OpenRCT2
         fixingRide,
         answeringRadioCall,
         respondingToBreakdownCall,
+        headingToClean,
+        headingToEmptyBin,
+        coveringNeglectedPaths,
 
         count,
     };

@@ -127,6 +127,7 @@ namespace OpenRCT2
 
     void SetTileElements(GameState_t& gameState, std::vector<TileElement>&& tileElements)
     {
+        SmartPathfinding::Invalidate(gameState);
         gameState.tileElements = std::move(tileElements);
         _tileIndex = TilePointerIndex<TileElement>(
             kMaximumMapSizeTechnical, gameState.tileElements.data(), gameState.tileElements.size());
@@ -986,6 +987,7 @@ namespace OpenRCT2
      */
     void TileElementRemove(TileElement* tileElement)
     {
+        SmartPathfinding::Invalidate(getGameState());
         // Replace Nth element by (N+1)th element.
         // This loop will make tileElement point to the old last element position,
         // after copy it to it's new position

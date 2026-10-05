@@ -60,6 +60,7 @@ namespace OpenRCT2
 
         gInMapInitCode = true;
         gameState.currentTicks = 0;
+        SmartPathfinding::Reset(gameState);
 
         MapInit(mapSize, isInTrackDesignerOrManager() ? Drawing::Colour::darkBlue : Drawing::Colour::black);
         Park::Initialise(gameState.park, gameState);
@@ -331,6 +332,10 @@ namespace OpenRCT2
 
         ResearchUpdate();
         RideRating::UpdateAll();
+        if (!isInEditorMode())
+        {
+            CheatsUpdateAutomaticPrices();
+        }
         RideMeasurementsUpdate();
         News::UpdateCurrentItem(park.newsItems);
 

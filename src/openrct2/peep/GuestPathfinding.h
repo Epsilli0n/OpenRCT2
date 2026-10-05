@@ -18,10 +18,16 @@ namespace OpenRCT2
 {
     struct Guest;
     struct Peep;
+    struct PathElement;
+    struct Ride;
+    struct RideStation;
+    struct RideStation;
 } // namespace OpenRCT2
 
 namespace OpenRCT2::PathFinding
 {
+    int32_t GetPermittedEdges(bool ignoreBanners, const PathElement* pathElement);
+    TileCoordsXYZ GetRideGoal(const Ride& ride, const RideStation& station);
     Direction ChooseDirection(
         const TileCoordsXYZ& loc, const TileCoordsXYZ& goal, Peep& peep, bool ignoreForeignQueues, RideId queueRideIndex);
 

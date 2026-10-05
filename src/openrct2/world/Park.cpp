@@ -160,14 +160,14 @@ namespace OpenRCT2::Park
         return suggestedMaxGuests;
     }
 
-    static uint32_t calculateGuestGenerationProbability(ParkData& park)
+    static uint32_t calculateGuestGenerationProbability(ParkData& park, const GameState_t& gameState)
     {
         // Begin with 50 + park rating
         uint32_t probability = 50 + std::clamp(park.rating - 200, 0, 650);
 
         // The more guests, the lower the chance of a new one
         uint32_t numGuests = park.numGuestsInPark + park.numGuestsHeadingForPark;
-        if (numGuests > park.suggestedGuestMaximum)
+        if (!gameState.cheats.disableGuestCrowding && numGuests > park.suggestedGuestMaximum)
         {
             probability /= 4;
             // Even lower for difficult guest generation
@@ -178,7 +178,7 @@ namespace OpenRCT2::Park
         }
 
         // Reduces chance for any more than 52000 guests
-        if (numGuests > 52000)
+        if (!gameState.cheats.disableGuestCrowding && numGuests > 52000)
         {
             probability /= 4;
         }
@@ -218,7 +218,8 @@ namespace OpenRCT2::Park
         if (static_cast<int32_t>(ScenarioRand() & 0xFFFF) < park.guestGenerationProbability)
         {
             bool difficultGeneration = park.flags.has(ParkFlag::difficultGuestGeneration);
-            if (!difficultGeneration || park.suggestedGuestMaximum + 150 >= park.numGuestsInPark)
+            if (gameState.cheats.disableGuestCrowding || !difficultGeneration
+                || park.suggestedGuestMaximum + 150 >= park.numGuestsInPark)
             {
                 GenerateGuest();
             }
@@ -337,7 +338,7 @@ namespace OpenRCT2::Park
             updateValuations(park, gameState);
             park.totalRideValueForMoney = calculateTotalRideValueForMoney(park, gameState);
             park.suggestedGuestMaximum = calculateSuggestedMaxGuests(park, gameState);
-            park.guestGenerationProbability = calculateGuestGenerationProbability(park);
+            park.guestGenerationProbability = calculateGuestGenerationProbability(park, gameState);
 
             windowMgr->InvalidateByClass(WindowClass::finances);
             auto intent = Intent(INTENT_ACTION_UPDATE_PARK_RATING);

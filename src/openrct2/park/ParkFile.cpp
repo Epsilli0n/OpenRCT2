@@ -99,6 +99,8 @@ namespace OpenRCT2
         restrictedObjects       = 0x37,
         pluginStorage           = 0x38,
         preview                 = 0x39,
+        // Private extension: saved dispatch history, optional for stock/older saves.
+        smartPathfinding        = 0x434f4458,
         packedObjects           = 0x80
         // clang-format on
     };
@@ -181,6 +183,8 @@ namespace OpenRCT2
             ReadWriteRestrictedObjectsChunk(gameState, os);
             ReadWritePluginStorageChunk(gameState, os);
 
+            ReadWriteSmartPathfindingChunk(gameState, os);
+
             auto targetVersion = os.getHeader().targetVersion;
 
             if (targetVersion < 0x4)
@@ -223,6 +227,7 @@ namespace OpenRCT2
             ReadWriteRestrictedObjectsChunk(gameState, os);
             ReadWritePluginStorageChunk(gameState, os);
             ReadWritePreviewChunk(gameState, os);
+            ReadWriteSmartPathfindingChunk(gameState, os);
             ReadWritePackedObjectsChunk(os);
         }
 
@@ -792,6 +797,18 @@ namespace OpenRCT2
             os.readWriteChunk(ParkFileChunkType::cheats, [](OrcaStream::ChunkStream& cs) {
                 DataSerialiser ds(cs.getMode() == OrcaStream::Mode::writing, cs.getStream());
                 CheatsSerialise(ds);
+            });
+        }
+
+        void ReadWriteSmartPathfindingChunk(GameState_t& gameState, OrcaStream& os)
+        {
+            if (os.getMode() == OrcaStream::Mode::reading)
+                SmartPathfinding::Reset(gameState);
+            if (os.getMode() == OrcaStream::Mode::writing && !gameState.cheats.smartHandymanDispatch)
+                return;
+            os.readWriteChunk(ParkFileChunkType::smartPathfinding, [&gameState](OrcaStream::ChunkStream& cs) {
+                DataSerialiser ds(cs.getMode() == OrcaStream::Mode::writing, cs.getStream());
+                SmartPathfinding::Serialise(gameState, ds);
             });
         }
 

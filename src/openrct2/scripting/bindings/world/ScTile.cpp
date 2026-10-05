@@ -11,6 +11,7 @@
 
     #include "ScTile.hpp"
 
+    #include "../../../GameState.h"
     #include "../../../world/Map.h"
     #include "../../../world/tile_element/LargeSceneryElement.h"
 
@@ -70,6 +71,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTile::data_set(JSContext* ctx, JSValue thisValue, JSValue jsValue)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         if (JS_GetTypedArrayType(jsValue) == JSTypedArrayEnum::JS_TYPED_ARRAY_UINT8)
         {
             auto coords = GetCoordinates(thisValue);
@@ -133,6 +135,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTile::insertElement(JSContext* ctx, JSValue thisValue, int argc, JSValue* argv)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         JS_UNPACK_UINT32(index, ctx, argv[0]);
         auto coords = GetCoordinates(thisValue);
         auto first = MapGetFirstElementAt(coords);
@@ -181,6 +184,7 @@ namespace OpenRCT2::Scripting
     JSValue ScTile::removeElement(JSContext* ctx, JSValue thisValue, int argc, JSValue* argv)
     {
         JS_THROW_IF_GAME_STATE_NOT_MUTABLE();
+        SmartPathfinding::Invalidate(getGameState());
         JS_UNPACK_UINT32(index, ctx, argv[0]);
         auto coords = GetCoordinates(thisValue);
         auto first = MapGetFirstElementAt(coords);

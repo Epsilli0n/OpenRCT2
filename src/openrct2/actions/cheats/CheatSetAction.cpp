@@ -155,8 +155,27 @@ namespace OpenRCT2::GameActions
             case CheatType::disableLittering:
                 gameState.cheats.disableLittering = _param1 != 0;
                 break;
+            case CheatType::disableGuestCrowding:
+                gameState.cheats.disableGuestCrowding = _param1 != 0;
+                if (gameState.cheats.disableGuestCrowding)
+                {
+                    CheatsClearGuestCrowdingThoughts();
+                }
+                break;
             case CheatType::noMoney:
                 SetScenarioNoMoney(park, _param1 != 0);
+                break;
+            case CheatType::automaticPricing:
+                gameState.cheats.automaticPricing = _param1 != 0;
+                CheatsUpdateAutomaticPrices(true);
+                break;
+            case CheatType::smartGuestNavigation:
+                gameState.cheats.smartGuestNavigation = _param1 != 0;
+                SmartPathfinding::Invalidate(gameState);
+                break;
+            case CheatType::smartHandymanDispatch:
+                gameState.cheats.smartHandymanDispatch = _param1 != 0;
+                SmartPathfinding::Reset(gameState);
                 break;
             case CheatType::addMoney:
                 AddMoney(park, _param1);
@@ -321,6 +340,14 @@ namespace OpenRCT2::GameActions
             case CheatType::disableVandalism:
                 [[fallthrough]];
             case CheatType::disableLittering:
+                [[fallthrough]];
+            case CheatType::disableGuestCrowding:
+                [[fallthrough]];
+            case CheatType::automaticPricing:
+                [[fallthrough]];
+            case CheatType::smartGuestNavigation:
+                [[fallthrough]];
+            case CheatType::smartHandymanDispatch:
                 [[fallthrough]];
             case CheatType::noMoney:
                 [[fallthrough]];

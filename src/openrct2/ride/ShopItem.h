@@ -117,6 +117,7 @@ struct ShopItemDescriptor
     bool IsSouvenir() const;
     bool IsPhoto() const;
     bool IsRecolourable() const;
+    money64 GetValue() const;
 };
 
 ShopItems ShopItemsGetAllFoods();

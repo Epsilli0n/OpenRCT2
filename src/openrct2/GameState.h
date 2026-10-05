@@ -15,6 +15,7 @@
 #include "core/Random.hpp"
 #include "entity/EntityRegistry.h"
 #include "interface/ZoomLevel.h"
+#include "peep/SmartPathfinding.h"
 #include "ride/Ride.h"
 #include "ride/RideRatings.h"
 #include "scenario/ScenarioOptions.h"
@@ -94,6 +95,7 @@ namespace OpenRCT2
         ObjectEntryIndex lastEntranceStyle;
 
         CheatsState cheats;
+        SmartPathfinding::State smartPathfinding;
     };
 
     GameState_t& getGameState();

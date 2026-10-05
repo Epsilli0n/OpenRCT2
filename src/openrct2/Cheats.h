@@ -31,6 +31,10 @@ struct CheatsState
     bool buildInPauseMode;
     bool ignoreRideIntensity;
     bool ignorePrice;
+    bool disableGuestCrowding;
+    bool automaticPricing;
+    bool smartGuestNavigation;
+    bool smartHandymanDispatch;
     bool disableVandalism;
     bool disableLittering;
     bool neverendingMarketing;
@@ -108,6 +112,10 @@ enum class CheatType : int32_t
     removeParkFences,
     ignorePrice,
     disableGrassGrowing,
+    disableGuestCrowding,
+    automaticPricing,
+    smartGuestNavigation,
+    smartHandymanDispatch,
     count,
 };
 
@@ -145,6 +153,8 @@ namespace OpenRCT2
 }
 
 void CheatsReset();
+void CheatsClearGuestCrowdingThoughts();
+void CheatsUpdateAutomaticPrices(bool force = false);
 const char* CheatsGetName(CheatType cheatType);
 void CheatsSet(CheatType cheatType, int64_t param1 = 0, int64_t param2 = 0);
 void CheatsSerialise(class OpenRCT2::DataSerialiser& ds);

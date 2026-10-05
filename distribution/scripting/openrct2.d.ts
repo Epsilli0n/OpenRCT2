@@ -4847,6 +4847,10 @@ declare global {
         disableBrakesFailure: boolean;
         disableClearanceChecks: boolean;
         disableLittering: boolean;
+        disableGuestCrowding: boolean;
+        automaticPricing: boolean;
+        smartGuestNavigation: boolean;
+        smartHandymanDispatch: boolean;
         disablePlantAging: boolean;
         disableGrassGrowing: boolean;
         disableRideValueAging: boolean;
