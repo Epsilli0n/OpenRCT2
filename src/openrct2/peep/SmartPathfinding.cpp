@@ -27,6 +27,7 @@
 #include "GuestPathfinding.h"
 
 #include <algorithm>
+#include <array>
 #include <stdexcept>
 
 namespace OpenRCT2::SmartPathfinding
@@ -165,27 +166,34 @@ namespace OpenRCT2::SmartPathfinding
         return state;
     }
 
-    static bool GuestCanUse(const Node& node, NodeKey goal, bool ignoreQueues, RideId queueRide)
+    static bool GuestCanUse(const Node& node, NodeKey goal, bool ignoreQueues, RideId queueRide, bool outsideOfPark)
     {
+        // Match PeepInteractWithPath, including construction rights at this height.
+        // Entrances remain reachable terminals so guests can cross the park boundary there.
+        if (node.path && MapIsLocationOwned(node.location.toCoordsXYZ()) == outsideOfPark)
+            return false;
         return !ignoreQueues || node.queueRide.IsNull() || node.queueRide == queueRide || Key(node.location) == goal;
     }
 
-    static const RouteField* RoutesTo(const TileCoordsXYZ& goal, bool ignoreQueues, RideId queueRide)
+    static const RouteField* RoutesTo(const TileCoordsXYZ& goal, bool ignoreQueues, RideId queueRide, bool outsideOfPark)
     {
         auto& state = Graph();
         auto goalKey = Key(goal);
         auto goalNode = state.nodeIndex.find(goalKey);
-        if (goalNode == state.nodeIndex.end())
+        if (goalNode == state.nodeIndex.end()
+            || !GuestCanUse(state.nodes[goalNode->second], goalKey, ignoreQueues, queueRide, outsideOfPark))
             return nullptr;
         for (const auto& route : state.routes)
         {
-            if (route.goal == goalKey && route.queueRide == queueRide && route.ignoreForeignQueues == ignoreQueues)
+            if (route.goal == goalKey && route.queueRide == queueRide && route.ignoreForeignQueues == ignoreQueues
+                && route.outsideOfPark == outsideOfPark)
                 return &route;
         }
 
         // Each field remembers the complete shortest route distance for every node.
         // Guests with the same destination share it rather than searching again.
-        RouteField route{ goalKey, queueRide, ignoreQueues, std::vector<uint32_t>(state.nodes.size(), kUnreachable) };
+        RouteField route{ goalKey, queueRide, ignoreQueues, outsideOfPark,
+                          std::vector<uint32_t>(state.nodes.size(), kUnreachable) };
         std::vector<uint32_t> pending{ goalNode->second };
         route.distances[goalNode->second] = 0;
         for (size_t cursor = 0; cursor < pending.size(); ++cursor)
@@ -195,7 +203,7 @@ namespace OpenRCT2::SmartPathfinding
             {
                 auto source = edge.destination;
                 if (!edge.guestAllowed || route.distances[source] != kUnreachable
-                    || !GuestCanUse(state.nodes[source], goalKey, ignoreQueues, queueRide))
+                    || !GuestCanUse(state.nodes[source], goalKey, ignoreQueues, queueRide, outsideOfPark))
                     continue;
                 route.distances[source] = route.distances[destination] + 1;
                 pending.push_back(source);
@@ -207,9 +215,10 @@ namespace OpenRCT2::SmartPathfinding
         return &state.routes.back();
     }
 
-    uint32_t Distance(const TileCoordsXYZ& from, const TileCoordsXYZ& goal, bool ignoreQueues, RideId queueRide)
+    uint32_t Distance(
+        const TileCoordsXYZ& from, const TileCoordsXYZ& goal, bool ignoreQueues, RideId queueRide, bool outsideOfPark)
     {
-        auto* route = RoutesTo(goal, ignoreQueues, queueRide);
+        auto* route = RoutesTo(goal, ignoreQueues, queueRide, outsideOfPark);
         if (!route)
             return kUnreachable;
         auto& state = getGameState().smartPathfinding;
@@ -217,23 +226,52 @@ namespace OpenRCT2::SmartPathfinding
         return source == state.nodeIndex.end() ? kUnreachable : route->distances[source->second];
     }
 
-    uint32_t RideDistance(const Guest& guest, const Ride& ride)
+    std::optional<TileCoordsXYZ> GetRideGoal(const Guest& guest, const Ride& ride)
     {
+        std::array<TileCoordsXYZ, Limits::kMaxStationsPerRide> goals{};
+        std::array<uint32_t, Limits::kMaxStationsPerRide> distances{};
+        size_t numGoals = 0;
+        std::optional<TileCoordsXYZ> closestGoal;
         uint32_t best = kUnreachable;
+        const auto stations = ride.getStations();
+        const bool hasEntrances = std::any_of(
+            stations.begin(), stations.end(), [](const auto& station) { return !station.entrance.isNull(); });
         for (const auto& station : ride.getStations())
         {
-            if (station.entrance.isNull() && ride.getStationIndex(&station).ToUnderlying() != 0)
+            if (station.entrance.isNull() && (hasEntrances || ride.getStationIndex(&station).ToUnderlying() != 0))
                 continue;
             auto goal = PathFinding::GetRideGoal(ride, station);
-            best = std::min(best, Distance(TileCoordsXYZ(guest.nextLoc), goal, true, ride.id));
+            auto distance = Distance(TileCoordsXYZ(guest.nextLoc), goal, true, ride.id, guest.outsideOfPark);
+            goals[numGoals] = goal;
+            distances[numGoals++] = distance;
+            if (distance < best)
+            {
+                best = distance;
+                closestGoal = goal;
+            }
         }
-        return best;
+        // Cycle over the same entrance list as native routing. Reachability of unrelated
+        // stations can change after passing a no-entry sign, without changing this choice.
+        if (numGoals > 1 && (ride.departFlags & RIDE_DEPART_SYNCHRONISE_WITH_ADJACENT_STATIONS))
+        {
+            auto selected = guest.guestNumRides % numGoals;
+            if (distances[selected] != kUnreachable)
+                return goals[selected];
+        }
+        // Fall back to the nearest reachable station if the preferred entrance is disconnected.
+        return closestGoal;
+    }
+
+    uint32_t RideDistance(const Guest& guest, const Ride& ride)
+    {
+        auto goal = GetRideGoal(guest, ride);
+        return goal ? Distance(TileCoordsXYZ(guest.nextLoc), *goal, true, ride.id, guest.outsideOfPark) : kUnreachable;
     }
 
     Direction GuestDirection(
         const TileCoordsXYZ& from, const TileCoordsXYZ& goal, Guest& guest, bool ignoreQueues, RideId queueRide)
     {
-        auto* route = RoutesTo(goal, ignoreQueues, queueRide);
+        auto* route = RoutesTo(goal, ignoreQueues, queueRide, guest.outsideOfPark);
         if (!route)
             return kInvalidDirection;
         auto& state = getGameState().smartPathfinding;
@@ -246,7 +284,7 @@ namespace OpenRCT2::SmartPathfinding
         for (const auto& edge : state.nodes[source->second].edges)
         {
             if (edge.guestAllowed && route->distances[edge.destination] < distance
-                && GuestCanUse(state.nodes[edge.destination], Key(goal), ignoreQueues, queueRide))
+                && GuestCanUse(state.nodes[edge.destination], Key(goal), ignoreQueues, queueRide, guest.outsideOfPark))
             {
                 bool permitted = false;
                 for (auto* path : TileElementsView<PathElement>(TileCoordsXY(from)))

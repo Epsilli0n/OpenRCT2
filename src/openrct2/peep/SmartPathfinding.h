@@ -16,6 +16,7 @@
 #include <deque>
 #include <limits>
 #include <map>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -67,6 +68,7 @@ namespace OpenRCT2::SmartPathfinding
         NodeKey goal;
         RideId queueRide;
         bool ignoreForeignQueues;
+        bool outsideOfPark;
         std::vector<uint32_t> distances;
     };
 
@@ -88,7 +90,10 @@ namespace OpenRCT2::SmartPathfinding
     void Invalidate(GameState_t& gameState);
     void Reset(GameState_t& gameState);
     void Serialise(GameState_t& gameState, DataSerialiser& ds);
-    uint32_t Distance(const TileCoordsXYZ& from, const TileCoordsXYZ& goal, bool ignoreForeignQueues, RideId queueRide);
+    uint32_t Distance(
+        const TileCoordsXYZ& from, const TileCoordsXYZ& goal, bool ignoreForeignQueues, RideId queueRide,
+        bool outsideOfPark = false);
+    std::optional<TileCoordsXYZ> GetRideGoal(const Guest& guest, const Ride& ride);
     uint32_t RideDistance(const Guest& guest, const Ride& ride);
     Direction GuestDirection(
         const TileCoordsXYZ& from, const TileCoordsXYZ& goal, Guest& guest, bool ignoreForeignQueues, RideId queueRide);

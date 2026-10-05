@@ -1944,23 +1944,10 @@ namespace OpenRCT2::PathFinding
             auto* ride = GetRide(peep.guestHeadingToRideId);
             if (ride && ride->status == RideStatus::open)
             {
-                uint32_t bestDistance = SmartPathfinding::kUnreachable;
-                TileCoordsXYZ goal;
-                for (const auto& station : ride->getStations())
+                auto goal = SmartPathfinding::GetRideGoal(peep, *ride);
+                if (goal)
                 {
-                    if (station.entrance.isNull() && ride->getStationIndex(&station).ToUnderlying() != 0)
-                        continue;
-                    auto candidate = GetRideGoal(*ride, station);
-                    auto distance = SmartPathfinding::Distance(loc, candidate, true, ride->id);
-                    if (distance < bestDistance)
-                    {
-                        bestDistance = distance;
-                        goal = candidate;
-                    }
-                }
-                if (bestDistance != SmartPathfinding::kUnreachable)
-                {
-                    auto chosen = ChooseDirection(loc, goal, peep, true, ride->id);
+                    auto chosen = ChooseDirection(loc, *goal, peep, true, ride->id);
                     if (DirectionValid(chosen))
                         return PeepMoveOneTile(chosen, peep);
                 }

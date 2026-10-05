@@ -33,6 +33,7 @@
 #include <openrct2/scripting/ScriptEngine.h>
 #include <openrct2/world/Map.h>
 #include <openrct2/world/tile_element/BannerElement.h>
+#include <openrct2/world/tile_element/EntranceElement.h>
 #include <openrct2/world/tile_element/PathElement.h>
 #include <openrct2/world/tile_element/SurfaceElement.h>
 #include <set>
@@ -181,6 +182,150 @@ TEST_F(SmartPathfindingTests, RespectsForeignQueuesAndGuestNoEntrySigns)
     auto* staff = HandymanAt({ 10, 10, 14 });
     LitterAt({ 13, 10, 14 });
     EXPECT_EQ(Smart::HandymanDirection(*staff), 2);
+}
+
+TEST_F(SmartPathfindingTests, GuestsAvoidUnownedShortcutsAndRejectBlockedRoutes)
+{
+    Line({ 10, 10, 14 }, { 13, 10, 14 });
+    Line({ 10, 10, 14 }, { 10, 12, 14 });
+    Line({ 10, 12, 14 }, { 13, 12, 14 });
+    Line({ 13, 12, 14 }, { 13, 10, 14 });
+    MapGetSurfaceElementAt(TileCoordsXY{ 11, 10 })->setOwnership({});
+    auto* guest = GuestAt({ 10, 10, 14 });
+    EXPECT_EQ(Smart::Distance({ 10, 10, 14 }, { 13, 10, 14 }, true, RideId::GetNull()), 7u);
+    EXPECT_EQ(PathFinding::ChooseDirection({ 10, 10, 14 }, { 13, 10, 14 }, *guest, true, RideId::GetNull()), 1);
+
+    TileElementRemove(reinterpret_cast<TileElement*>(MapGetPathElementAt({ 10, 11, 14 })));
+    guest->guestIsLostCountdown = 33;
+    EXPECT_EQ(Smart::Distance({ 10, 10, 14 }, { 13, 10, 14 }, true, RideId::GetNull()), Smart::kUnreachable);
+    EXPECT_EQ(PathFinding::ChooseDirection({ 10, 10, 14 }, { 13, 10, 14 }, *guest, true, RideId::GetNull()), kInvalidDirection);
+    EXPECT_EQ(Smart::Distance({ 10, 10, 14 }, { 11, 10, 14 }, true, RideId::GetNull()), Smart::kUnreachable);
+    EXPECT_EQ(guest->guestIsLostCountdown, 33);
+}
+
+TEST_F(SmartPathfindingTests, GuestRoutesRespectConstructionRightsAtEachPathHeight)
+{
+    Line({ 10, 10, 14 }, { 13, 10, 14 });
+    Line({ 10, 10, 17 }, { 13, 10, 17 });
+    auto* surface = MapGetSurfaceElementAt(TileCoordsXY{ 11, 10 });
+    surface->setBaseZ(14 * kCoordsZStep);
+    surface->setOwnership({ OwnershipFlag::constructionRightsOwned });
+    EXPECT_EQ(Smart::Distance({ 10, 10, 14 }, { 13, 10, 14 }, true, RideId::GetNull()), Smart::kUnreachable);
+    EXPECT_EQ(Smart::Distance({ 10, 10, 17 }, { 13, 10, 17 }, true, RideId::GetNull()), 3u);
+    surface->setOwnership({ OwnershipFlag::landOwned });
+    Smart::Invalidate(getGameState());
+    EXPECT_EQ(Smart::Distance({ 10, 10, 14 }, { 13, 10, 14 }, true, RideId::GetNull()), 3u);
+}
+
+TEST_F(SmartPathfindingTests, OutsideGuestsStayOnOutsidePaths)
+{
+    Line({ 10, 10, 14 }, { 13, 10, 14 });
+    for (int x = 10; x <= 13; ++x)
+        MapGetSurfaceElementAt(TileCoordsXY{ x, 10 })->setOwnership({});
+    auto* guest = GuestAt({ 10, 10, 14 });
+    guest->outsideOfPark = true;
+    EXPECT_EQ(PathFinding::ChooseDirection({ 10, 10, 14 }, { 13, 10, 14 }, *guest, true, RideId::GetNull()), 2);
+    // The same destination must have separate cached routes for inside and outside guests.
+    guest->outsideOfPark = false;
+    EXPECT_EQ(PathFinding::ChooseDirection({ 10, 10, 14 }, { 13, 10, 14 }, *guest, true, RideId::GetNull()), kInvalidDirection);
+    guest->outsideOfPark = true;
+    MapGetSurfaceElementAt(TileCoordsXY{ 11, 10 })->setOwnership({ OwnershipFlag::landOwned });
+    Smart::Invalidate(getGameState());
+    EXPECT_EQ(PathFinding::ChooseDirection({ 10, 10, 14 }, { 13, 10, 14 }, *guest, true, RideId::GetNull()), kInvalidDirection);
+}
+
+TEST_F(SmartPathfindingTests, SynchronizedStationsCycleAndStaySelectedAlongTheRoute)
+{
+    Line({ 10, 10, 14 }, { 11, 10, 14 });
+    Line({ 10, 10, 14 }, { 10, 14, 14 });
+    auto* ride = RideAllocateAtIndex(RideId::FromUnderlying(0));
+    ASSERT_NE(ride, nullptr);
+    ride->type = RIDE_TYPE_LOOPING_ROLLER_COASTER;
+    ride->status = RideStatus::open;
+    ride->departFlags = RIDE_DEPART_SYNCHRONISE_WITH_ADJACENT_STATIONS;
+    for (auto& station : ride->getStations())
+        station.entrance.setNull();
+    const TileCoordsXYZ nearGoal{ 11, 10, 14 };
+    const TileCoordsXYZ farGoal{ 10, 14, 14 };
+    ride->getStation().entrance = { nearGoal, 0 };
+    ride->getStation(StationIndex::FromUnderlying(2)).entrance = { farGoal, 0 };
+    auto* guest = GuestAt({ 10, 10, 14 });
+    for (uint16_t rides = 0; rides < 4; ++rides)
+    {
+        guest->guestNumRides = rides;
+        guest->guestHeadingToRideId = ride->id;
+        PathFinding::CalculateNextDestination(*guest);
+        EXPECT_TRUE(TileCoordsXYZ(guest->pathfindGoal) == (rides % 2 == 0 ? nearGoal : farGoal));
+        EXPECT_EQ(Smart::RideDistance(*guest, *ride), rides % 2 == 0 ? 1u : 4u);
+    }
+    guest->guestNumRides = 1;
+    guest->nextLoc = TileCoordsXYZ{ 10, 11, 14 }.toCoordsXYZ();
+    PathFinding::CalculateNextDestination(*guest);
+    EXPECT_TRUE(TileCoordsXYZ(guest->pathfindGoal) == farGoal);
+    EXPECT_EQ(guest->guestHeadingToRideId, ride->id);
+
+    // A disconnected station must not trap the guest or prevent using the ride.
+    TileElementRemove(reinterpret_cast<TileElement*>(MapGetPathElementAt({ 10, 12, 14 })));
+    PathFinding::CalculateNextDestination(*guest);
+    EXPECT_TRUE(TileCoordsXYZ(guest->pathfindGoal) == nearGoal);
+    EXPECT_EQ(guest->guestHeadingToRideId, ride->id);
+
+    ride->departFlags = 0;
+    Connect({ 10, 11, 14 }, { 10, 12, 14 });
+    Connect({ 10, 12, 14 }, { 10, 13, 14 });
+    PathFinding::CalculateNextDestination(*guest);
+    EXPECT_TRUE(TileCoordsXYZ(guest->pathfindGoal) == nearGoal);
+}
+
+TEST_F(SmartPathfindingTests, ParkEntrancesRemainReachableFromBothSidesOfTheBoundary)
+{
+    Line({ 10, 10, 14 }, { 12, 10, 14 });
+    Line({ 14, 10, 14 }, { 16, 10, 14 });
+    for (int x = 14; x <= 16; ++x)
+        MapGetSurfaceElementAt(TileCoordsXY{ x, 10 })->setOwnership({});
+    const TileCoordsXYZ goal{ 13, 10, 14 };
+    auto* entrance = TileElementInsert(goal.toCoordsXYZ(), 0xF, TileElementType::entrance)->asEntrance();
+    entrance->setEntranceType(EntranceType::parkEntrance);
+    entrance->setSequenceIndex(ParkEntranceSequence::centre);
+    entrance->setDirection(0);
+    MapGetPathElementAt({ 12, 10, 14 })->setEdges(0b0101);
+    MapGetPathElementAt({ 14, 10, 14 })->setEdges(0b0101);
+    auto* guest = GuestAt({ 10, 10, 14 });
+    EXPECT_EQ(PathFinding::ChooseDirection({ 10, 10, 14 }, goal, *guest, true, RideId::GetNull()), 2);
+    EXPECT_EQ(PathFinding::ChooseDirection({ 16, 10, 14 }, goal, *guest, true, RideId::GetNull()), kInvalidDirection);
+    guest->outsideOfPark = true;
+    EXPECT_EQ(PathFinding::ChooseDirection({ 16, 10, 14 }, goal, *guest, true, RideId::GetNull()), 0);
+    EXPECT_EQ(PathFinding::ChooseDirection({ 10, 10, 14 }, goal, *guest, true, RideId::GetNull()), kInvalidDirection);
+}
+
+TEST_F(SmartPathfindingTests, StationChoiceDoesNotChangeAfterPassingANoEntrySign)
+{
+    Line({ 10, 10, 14 }, { 11, 10, 14 });
+    Line({ 10, 10, 14 }, { 10, 14, 14 });
+    Connect({ 10, 13, 14 }, { 11, 13, 14 });
+    auto* banner = TileElementInsert({ 10 * 32, 11 * 32, 14 * 8 + 16 }, 0, TileElementType::banner)->asBanner();
+    banner->setAllowedEdges(0xF & ~(1 << 3));
+    auto* ride = RideAllocateAtIndex(RideId::FromUnderlying(0));
+    ASSERT_NE(ride, nullptr);
+    ride->type = RIDE_TYPE_LOOPING_ROLLER_COASTER;
+    ride->status = RideStatus::open;
+    ride->departFlags = RIDE_DEPART_SYNCHRONISE_WITH_ADJACENT_STATIONS;
+    for (auto& station : ride->getStations())
+        station.entrance.setNull();
+    ride->getStation().entrance = { 11, 10, 14, 0 };
+    ride->getStation(StationIndex::FromUnderlying(1)).entrance = { 11, 13, 14, 0 };
+    ride->getStation(StationIndex::FromUnderlying(2)).entrance = { 10, 14, 14, 0 };
+    auto* guest = GuestAt({ 10, 10, 14 });
+    guest->guestNumRides = 2;
+    guest->guestHeadingToRideId = ride->id;
+    PathFinding::CalculateNextDestination(*guest);
+    EXPECT_TRUE(
+        TileCoordsXYZ(guest->pathfindGoal) == TileCoordsXYZ(ride->getStation(StationIndex::FromUnderlying(2)).entrance));
+    guest->nextLoc = TileCoordsXYZ{ 10, 11, 14 }.toCoordsXYZ();
+    ASSERT_EQ(Smart::Distance(TileCoordsXYZ(guest->nextLoc), { 11, 10, 14 }, true, ride->id), Smart::kUnreachable);
+    PathFinding::CalculateNextDestination(*guest);
+    EXPECT_TRUE(
+        TileCoordsXYZ(guest->pathfindGoal) == TileCoordsXYZ(ride->getStation(StationIndex::FromUnderlying(2)).entrance));
 }
 
 TEST_F(SmartPathfindingTests, InvalidatesRememberedRoutesWhenPathsAreRemoved)
