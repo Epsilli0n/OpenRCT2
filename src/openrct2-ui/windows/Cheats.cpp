@@ -48,6 +48,7 @@ enum
     WINDOW_CHEATS_PAGE_PARK,
     WINDOW_CHEATS_PAGE_RIDES,
     WINDOW_CHEATS_PAGE_WEATHER,
+    WINDOW_CHEATS_PAGE_CUSTOM,
     WINDOW_CHEATS_PAGE_COUNT,
 };
 
@@ -90,6 +91,7 @@ enum WindowCheatsWidgetIdx : WidgetIndex
     WIDX_TAB_5,
     WIDX_TAB_6,
     WIDX_TAB_7,
+    WIDX_TAB_8,
     WIDX_TAB_CONTENT,
 
     WIDX_NO_MONEY = WIDX_TAB_CONTENT,
@@ -100,7 +102,6 @@ enum WindowCheatsWidgetIdx : WidgetIndex
     WIDX_ADD_MONEY,
     WIDX_SET_MONEY,
     WIDX_CLEAR_LOAN,
-    WIDX_AUTOMATIC_PRICING,
 
     WIDX_DATE_GROUP = WIDX_TAB_CONTENT,
     WIDX_YEAR_BOX,
@@ -144,8 +145,6 @@ enum WindowCheatsWidgetIdx : WidgetIndex
     WIDX_GUEST_IGNORE_PRICE,
     WIDX_DISABLE_VANDALISM,
     WIDX_DISABLE_LITTERING,
-    WIDX_DISABLE_GUEST_CROWDING,
-    WIDX_SMART_GUEST_NAVIGATION,
 
     WIDX_STAFF_GROUP = WIDX_TAB_CONTENT,
     WIDX_STAFF_SPEED,
@@ -158,7 +157,6 @@ enum WindowCheatsWidgetIdx : WidgetIndex
     WIDX_WATER_PLANTS,
     WIDX_DISABLE_PLANT_AGING,
     WIDX_DISABLE_GRASS_GROWING,
-    WIDX_SMART_HANDYMAN_DISPATCH,
 
     WIDX_GENERAL_GROUP = WIDX_TAB_CONTENT,
     WIDX_OWN_ALL_LAND,
@@ -205,12 +203,17 @@ enum WindowCheatsWidgetIdx : WidgetIndex
     WIDX_FAUNA_GROUP,
     WIDX_CREATE_DUCKS,
     WIDX_REMOVE_DUCKS,
+
+    WIDX_DISABLE_GUEST_CROWDING = WIDX_TAB_CONTENT,
+    WIDX_AUTOMATIC_PRICING,
+    WIDX_SMART_GUEST_NAVIGATION,
+    WIDX_SMART_HANDYMAN_DISPATCH,
 };
 
 #pragma region MEASUREMENTS
 
 static constexpr StringId kWindowTitle = STR_CHEAT_TITLE;
-static constexpr ScreenSize kWindowSize = { 249, 300 };
+static constexpr ScreenSize kWindowSize = { 256, 300 };
 
 static constexpr ScreenSize kCheatButtonSize = {110, 17};
 static constexpr ScreenSize kCheatCheckSize = {221, 12};
@@ -231,7 +234,8 @@ static constexpr auto kMainCheatWidgets = makeWidgets(
     makeTab   ({ 96, 17}, STR_STAFF_CHEATS_TIP                          ), /* tab 5 */
     makeTab   ({127, 17}, STR_PARK_CHEATS_TIP                           ), /* tab 6 */
     makeTab   ({158, 17}, STR_RIDE_CHEATS_TIP                           ), /* tab 4 */
-    makeTab   ({189, 17}, STR_WEATHER_NATURE_CHEATS_TIP                 )  /* tab 7 */
+    makeTab   ({189, 17}, STR_WEATHER_NATURE_CHEATS_TIP                 ), /* tab 7 */
+    makeTab   ({220, 17}, STR_CHEAT_TITLE_CUSTOM                        )  /* tab 8 */
 );
 
 static constexpr auto window_cheats_money_widgets = makeWidgets(
@@ -241,8 +245,7 @@ static constexpr auto window_cheats_money_widgets = makeWidgets(
     makeHoldableSpinnerWidgets({ 11,  92}, kCheatSpinnerSize, WidgetType::spinner,  WindowColour::secondary                ), // money value
     makeHoldableWidget        ({ 11, 111}, kCheatButtonSize,  WidgetType::button,   WindowColour::secondary, STR_ADD_MONEY         ), // add money
     makeWidget                ({127, 111}, kCheatButtonSize,  WidgetType::button,   WindowColour::secondary, STR_SET_MONEY         ), // set money
-    makeWidget                ({ 11, 145}, kCheatButtonSize,  WidgetType::button,   WindowColour::secondary, STR_CHEAT_CLEAR_LOAN  ), // Clear loan
-    makeWidget                ({ 11, 172}, kCheatCheckSize,   WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_AUTOMATIC_PRICING, STR_CHEAT_AUTOMATIC_PRICING_TIP)
+    makeWidget                ({ 11, 145}, kCheatButtonSize,  WidgetType::button,   WindowColour::secondary, STR_CHEAT_CLEAR_LOAN  )  // Clear loan
 );
 
 static constexpr auto window_cheats_date_widgets = makeWidgets(
@@ -284,13 +287,11 @@ static constexpr auto window_cheats_guests_widgets = makeWidgets(
     makeWidget({ 11, 300+15+6-3}, kCheatButtonSize, WidgetType::button,   WindowColour::secondary, STR_SHOP_ITEM_PLURAL_BALLOON                                    ), // give guests balloons
     makeWidget({127, 300+15+6-3}, kCheatButtonSize, WidgetType::button,   WindowColour::secondary, STR_SHOP_ITEM_PLURAL_UMBRELLA                                   ), // give guests umbrellas
 
-    makeWidget({  5, 342+6}, {238, 119},        WidgetType::groupbox, WindowColour::secondary, STR_GUEST_BEHAVIOUR                                             ), // Guests behaviour group frame
+    makeWidget({  5, 342+6}, {238,  85},        WidgetType::groupbox, WindowColour::secondary, STR_GUEST_BEHAVIOUR                                             ), // Guests behaviour group frame
     makeWidget({ 11, 363+1}, kCheatCheckSize,   WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_IGNORE_INTENSITY,      STR_CHEAT_IGNORE_INTENSITY_TIP ), // guests ignore intensity
     makeWidget({ 11, 380+1}, kCheatCheckSize,   WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_IGNORE_PRICE,          STR_CHEAT_IGNORE_PRICE_TIP     ), // guests ignore price
     makeWidget({ 11, 397+1}, kCheatCheckSize,   WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_DISABLE_VANDALISM,     STR_CHEAT_DISABLE_VANDALISM_TIP), // disable vandalism
-    makeWidget({ 11, 414+1}, kCheatCheckSize,   WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_DISABLE_LITTERING,     STR_CHEAT_DISABLE_LITTERING_TIP), // disable littering
-    makeWidget({ 11, 431+1}, kCheatCheckSize,   WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_DISABLE_GUEST_CROWDING, STR_CHEAT_DISABLE_GUEST_CROWDING_TIP), // disable guest overcrowding
-    makeWidget({ 11, 448+1}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_SMART_GUEST_NAVIGATION, STR_CHEAT_SMART_GUEST_NAVIGATION_TIP)
+    makeWidget({ 11, 414+1}, kCheatCheckSize,   WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_DISABLE_LITTERING,     STR_CHEAT_DISABLE_LITTERING_TIP)  // disable littering
 );
 
 static constexpr auto window_cheats_staff_widgets = makeWidgets(
@@ -299,15 +300,14 @@ static constexpr auto window_cheats_staff_widgets = makeWidgets(
     makeWidget                ({126, 371-309}, {111,  14},       WidgetType::dropdownMenu, WindowColour::secondary                                                                  ), // Staff speed
     makeWidget                ({225, 372-309}, { 11,  12},       WidgetType::button,       WindowColour::secondary, STR_DROPDOWN_GLYPH                                              ), // Staff speed
 
-    makeWidget                ({  5, 257-168}, {238,  139},      WidgetType::groupbox,     WindowColour::secondary, STR_CHEAT_MAINTENANCE_GROUP                                     ), // Maintenance group
+    makeWidget                ({  5, 257-168}, {238,  116},      WidgetType::groupbox,     WindowColour::secondary, STR_CHEAT_MAINTENANCE_GROUP                                     ), // Maintenance group
     makeWidget                ({ 11, 271-168}, kCheatButtonSize, WidgetType::button,       WindowColour::secondary, STR_CHEAT_REMOVE_LITTER                                         ), // Remove litter
     makeWidget                ({127, 271-168}, kCheatButtonSize, WidgetType::button,       WindowColour::secondary, STR_CHEAT_FIX_VANDALISM                                         ), // Fix vandalism
     makeWidget                ({ 11, 292-168}, kCheatButtonSize, WidgetType::button,       WindowColour::secondary, STR_CHEAT_CLEAR_GRASS                                           ), // Clear grass
     makeWidget                ({127, 292-168}, kCheatButtonSize, WidgetType::button,       WindowColour::secondary, STR_CHEAT_MOWED_GRASS                                           ), // Mowed grass
     makeWidget                ({ 11, 313-168}, kCheatButtonSize, WidgetType::button,       WindowColour::secondary, STR_CHEAT_WATER_PLANTS                                          ), // Water plants
     makeWidget                ({ 11, 334-164}, kCheatCheckSize,  WidgetType::checkbox,     WindowColour::secondary, STR_CHEAT_DISABLE_PLANT_AGING, STR_CHEAT_DISABLE_PLANT_AGING_TIP),  // Disable plant ageing
-    makeWidget                ({ 11, 351-164}, kCheatCheckSize,  WidgetType::checkbox,     WindowColour::secondary, STR_CHEAT_DISABLE_GRASS_GROWING, STR_CHEAT_DISABLE_GRASS_GROWING_TIP), // Disable grass growing
-    makeWidget({ 11, 214}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_SMART_HANDYMAN_DISPATCH, STR_CHEAT_SMART_HANDYMAN_DISPATCH_TIP)
+    makeWidget                ({ 11, 351-164}, kCheatCheckSize,  WidgetType::checkbox,     WindowColour::secondary, STR_CHEAT_DISABLE_GRASS_GROWING, STR_CHEAT_DISABLE_GRASS_GROWING_TIP)  // Disable grass growing
 );
 
 static constexpr auto window_cheats_park_widgets = makeWidgets(
@@ -368,6 +368,14 @@ static constexpr auto window_cheats_weather_widgets = makeWidgets(
     makeWidget                ({127, 115}, kCheatButtonSize, WidgetType::button,       WindowColour::secondary, STR_REMOVE_DUCKS,                STR_REMOVE_DUCKS_TIP        )  // Remove ducks
 );
 
+static constexpr auto window_cheats_custom_widgets = makeWidgets(
+    kMainCheatWidgets,
+    makeWidget({ 11,  55}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_DISABLE_GUEST_CROWDING, STR_CHEAT_DISABLE_GUEST_CROWDING_TIP),
+    makeWidget({ 11,  78}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_AUTOMATIC_PRICING, STR_CHEAT_AUTOMATIC_PRICING_TIP),
+    makeWidget({ 11, 101}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_SMART_GUEST_NAVIGATION, STR_CHEAT_SMART_GUEST_NAVIGATION_TIP),
+    makeWidget({ 11, 124}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_SMART_HANDYMAN_DISPATCH, STR_CHEAT_SMART_HANDYMAN_DISPATCH_TIP)
+);
+
 static constexpr std::span<const Widget> window_cheats_page_widgets[] =
 {
     window_cheats_money_widgets,
@@ -377,6 +385,7 @@ static constexpr std::span<const Widget> window_cheats_page_widgets[] =
     window_cheats_park_widgets,
     window_cheats_rides_widgets,
     window_cheats_weather_widgets,
+    window_cheats_custom_widgets,
 };
 
 static StringId window_cheats_page_titles[] = {
@@ -387,6 +396,7 @@ static StringId window_cheats_page_titles[] = {
     STR_CHEAT_TITLE_PARK,
     STR_CHEAT_TITLE_RIDE,
     STR_CHEAT_TITLE_WEATHER,
+    STR_CHEAT_TITLE_CUSTOM,
 };
     // clang-format on
 
@@ -451,6 +461,7 @@ static StringId window_cheats_page_titles[] = {
                 case WIDX_TAB_5:
                 case WIDX_TAB_6:
                 case WIDX_TAB_7:
+                case WIDX_TAB_8:
                     setPage(widgetIndex - WIDX_TAB_1);
                     break;
                 default:
@@ -473,6 +484,9 @@ static StringId window_cheats_page_titles[] = {
                             break;
                         case WINDOW_CHEATS_PAGE_WEATHER:
                             onMouseUpWeather(widgetIndex);
+                            break;
+                        case WINDOW_CHEATS_PAGE_CUSTOM:
+                            onMouseUpCustom(widgetIndex);
                             break;
                     }
                     break;
@@ -512,7 +526,6 @@ static StringId window_cheats_page_titles[] = {
                     setWidgetDisabled(WIDX_ADD_MONEY, moneyDisabled);
                     setWidgetDisabled(WIDX_SET_MONEY, moneyDisabled);
                     setWidgetDisabled(WIDX_CLEAR_LOAN, moneyDisabled);
-                    setCheckboxValue(WIDX_AUTOMATIC_PRICING, gameState.cheats.automaticPricing);
                     break;
                 }
                 case WINDOW_CHEATS_PAGE_GUESTS:
@@ -521,8 +534,6 @@ static StringId window_cheats_page_titles[] = {
                     setCheckboxValue(WIDX_GUEST_IGNORE_PRICE, gameState.cheats.ignorePrice);
                     setCheckboxValue(WIDX_DISABLE_VANDALISM, gameState.cheats.disableVandalism);
                     setCheckboxValue(WIDX_DISABLE_LITTERING, gameState.cheats.disableLittering);
-                    setCheckboxValue(WIDX_DISABLE_GUEST_CROWDING, gameState.cheats.disableGuestCrowding);
-                    setCheckboxValue(WIDX_SMART_GUEST_NAVIGATION, gameState.cheats.smartGuestNavigation);
                     break;
                 }
                 case WINDOW_CHEATS_PAGE_PARK:
@@ -559,6 +570,12 @@ static StringId window_cheats_page_titles[] = {
                 case WINDOW_CHEATS_PAGE_WEATHER:
                     setCheckboxValue(WIDX_FREEZE_WEATHER, gameState.cheats.freezeWeather);
                     break;
+                case WINDOW_CHEATS_PAGE_CUSTOM:
+                    setCheckboxValue(WIDX_DISABLE_GUEST_CROWDING, gameState.cheats.disableGuestCrowding);
+                    setCheckboxValue(WIDX_AUTOMATIC_PRICING, gameState.cheats.automaticPricing);
+                    setCheckboxValue(WIDX_SMART_GUEST_NAVIGATION, gameState.cheats.smartGuestNavigation);
+                    setCheckboxValue(WIDX_SMART_HANDYMAN_DISPATCH, gameState.cheats.smartHandymanDispatch);
+                    break;
             }
 
             // Current weather
@@ -573,7 +590,6 @@ static StringId window_cheats_page_titles[] = {
             if (page == WINDOW_CHEATS_PAGE_STAFF)
             {
                 widgets[WIDX_STAFF_SPEED].text = _staffSpeedNames[EnumValue(gameState.cheats.selectedStaffSpeed)];
-                setCheckboxValue(WIDX_SMART_HANDYMAN_DISPATCH, gameState.cheats.smartHandymanDispatch);
             }
 
             setWidgetDisabled(WIDX_TAB_2, isInEditorMode());
@@ -728,7 +744,8 @@ static StringId window_cheats_page_titles[] = {
 
             setWidgets(window_cheats_page_widgets[p]);
             widgetSetPressedExclusive(
-                *this, { WIDX_TAB_1, WIDX_TAB_2, WIDX_TAB_3, WIDX_TAB_4, WIDX_TAB_5, WIDX_TAB_6, WIDX_TAB_7 }, WIDX_TAB_1 + p);
+                *this, { WIDX_TAB_1, WIDX_TAB_2, WIDX_TAB_3, WIDX_TAB_4, WIDX_TAB_5, WIDX_TAB_6, WIDX_TAB_7, WIDX_TAB_8 },
+                WIDX_TAB_1 + p);
 
             auto maxY = 0;
             for (WidgetIndex widgetIdx = WIDX_TAB_CONTENT; widgetIdx < widgets.size(); widgetIdx++)
@@ -753,7 +770,7 @@ static StringId window_cheats_page_titles[] = {
         void UpdateTabPositions()
         {
             constexpr WidgetIndex tabs[] = {
-                WIDX_TAB_1, WIDX_TAB_2, WIDX_TAB_3, WIDX_TAB_4, WIDX_TAB_5, WIDX_TAB_6, WIDX_TAB_7,
+                WIDX_TAB_1, WIDX_TAB_2, WIDX_TAB_3, WIDX_TAB_4, WIDX_TAB_5, WIDX_TAB_6, WIDX_TAB_7, WIDX_TAB_8,
             };
 
             auto left = kTabStart;
@@ -832,6 +849,16 @@ static StringId window_cheats_page_titles[] = {
                 GfxDrawSprite(
                     rt, ImageId(sprite_idx),
                     windowPos + ScreenCoordsXY{ widgets[WIDX_TAB_7].left + 2, widgets[WIDX_TAB_7].top + 4 });
+            }
+
+            // Custom cheats tab
+            if (!isWidgetDisabled(WIDX_TAB_8))
+            {
+                uint32_t sprite = SPR_TAB_GEARS_0;
+                if (page == WINDOW_CHEATS_PAGE_CUSTOM)
+                    sprite += (currentFrame / 4) % 4;
+                GfxDrawSprite(
+                    rt, ImageId(sprite), windowPos + ScreenCoordsXY{ widgets[WIDX_TAB_8].left, widgets[WIDX_TAB_8].top });
             }
         }
 
@@ -935,9 +962,6 @@ static StringId window_cheats_page_titles[] = {
                     break;
                 case WIDX_CLEAR_LOAN:
                     CheatsSet(CheatType::clearLoan);
-                    break;
-                case WIDX_AUTOMATIC_PRICING:
-                    CheatsSet(CheatType::automaticPricing, !getGameState().cheats.automaticPricing);
                     break;
             }
         }
@@ -1104,9 +1128,6 @@ static StringId window_cheats_page_titles[] = {
                 case WIDX_DISABLE_GRASS_GROWING:
                     CheatsSet(CheatType::disableGrassGrowing, !gameState.cheats.disableGrassGrowing);
                     break;
-                case WIDX_SMART_HANDYMAN_DISPATCH:
-                    CheatsSet(CheatType::smartHandymanDispatch, !gameState.cheats.smartHandymanDispatch);
-                    break;
             }
         }
 
@@ -1256,11 +1277,25 @@ static StringId window_cheats_page_titles[] = {
                 case WIDX_DISABLE_LITTERING:
                     CheatsSet(CheatType::disableLittering, !gameState.cheats.disableLittering);
                     break;
+            }
+        }
+
+        void onMouseUpCustom(WidgetIndex widgetIndex)
+        {
+            const auto& cheats = getGameState().cheats;
+            switch (widgetIndex)
+            {
                 case WIDX_DISABLE_GUEST_CROWDING:
-                    CheatsSet(CheatType::disableGuestCrowding, !gameState.cheats.disableGuestCrowding);
+                    CheatsSet(CheatType::disableGuestCrowding, !cheats.disableGuestCrowding);
+                    break;
+                case WIDX_AUTOMATIC_PRICING:
+                    CheatsSet(CheatType::automaticPricing, !cheats.automaticPricing);
                     break;
                 case WIDX_SMART_GUEST_NAVIGATION:
-                    CheatsSet(CheatType::smartGuestNavigation, !gameState.cheats.smartGuestNavigation);
+                    CheatsSet(CheatType::smartGuestNavigation, !cheats.smartGuestNavigation);
+                    break;
+                case WIDX_SMART_HANDYMAN_DISPATCH:
+                    CheatsSet(CheatType::smartHandymanDispatch, !cheats.smartHandymanDispatch);
                     break;
             }
         }

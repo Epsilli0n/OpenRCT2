@@ -3883,3 +3883,4 @@ STR_7089    :Handymen reserve reachable litter and full-bin jobs, then visit neg
 STR_7090    :Heading to clean litter
 STR_7091    :Heading to empty a full bin
 STR_7092    :Visiting neglected paths
+STR_7093    :Custom cheats
