@@ -9,6 +9,7 @@
 
 #include "../UiStringIds.h"
 
+#include <charconv>
 #include <iterator>
 #include <openrct2-ui/interface/Dropdown.h>
 #include <openrct2-ui/interface/Widget.h>
@@ -28,6 +29,8 @@
 #include <openrct2/localisation/Currency.h>
 #include <openrct2/localisation/Formatter.h>
 #include <openrct2/localisation/Formatting.h>
+#include <openrct2/ride/CapacityOverride.h>
+#include <openrct2/ride/RideManager.hpp>
 #include <openrct2/ui/WindowManager.h>
 #include <openrct2/util/Util.h>
 #include <openrct2/world/Park.h>
@@ -206,8 +209,20 @@ enum WindowCheatsWidgetIdx : WidgetIndex
 
     WIDX_DISABLE_GUEST_CROWDING = WIDX_TAB_CONTENT,
     WIDX_AUTOMATIC_PRICING,
+    WIDX_PRICING_PERCENT,
+    WIDX_PRICING_PERCENT_UP,
+    WIDX_PRICING_PERCENT_DOWN,
     WIDX_SMART_GUEST_NAVIGATION,
     WIDX_SMART_HANDYMAN_DISPATCH,
+    WIDX_CAPACITY_GROUP,
+    WIDX_CAPACITY_RIDE,
+    WIDX_CAPACITY_RIDE_DROPDOWN,
+    WIDX_CAPACITY_VALUE,
+    WIDX_CAPACITY_UP,
+    WIDX_CAPACITY_DOWN,
+    WIDX_CAPACITY_APPLY,
+    WIDX_CAPACITY_DEFAULT,
+    WIDX_CAPACITY_HELP,
 };
 
 #pragma region MEASUREMENTS
@@ -372,8 +387,16 @@ static constexpr auto window_cheats_custom_widgets = makeWidgets(
     kMainCheatWidgets,
     makeWidget({ 11,  55}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_DISABLE_GUEST_CROWDING, STR_CHEAT_DISABLE_GUEST_CROWDING_TIP),
     makeWidget({ 11,  78}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_AUTOMATIC_PRICING, STR_CHEAT_AUTOMATIC_PRICING_TIP),
-    makeWidget({ 11, 101}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_SMART_GUEST_NAVIGATION, STR_CHEAT_SMART_GUEST_NAVIGATION_TIP),
-    makeWidget({ 11, 124}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_SMART_HANDYMAN_DISPATCH, STR_CHEAT_SMART_HANDYMAN_DISPATCH_TIP)
+    makeHoldableSpinnerWidgets({120, 98}, kCheatSpinnerSize, WidgetType::spinner, WindowColour::secondary, kStringIdEmpty, STR_CHEAT_PRICING_PERCENT_TIP),
+    makeWidget({ 11, 125}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_SMART_GUEST_NAVIGATION, STR_CHEAT_SMART_GUEST_NAVIGATION_TIP),
+    makeWidget({ 11, 148}, kCheatCheckSize, WidgetType::checkbox, WindowColour::secondary, STR_CHEAT_SMART_HANDYMAN_DISPATCH, STR_CHEAT_SMART_HANDYMAN_DISPATCH_TIP),
+    makeWidget({  5, 172}, {238, 132}, WidgetType::groupbox, WindowColour::secondary, STR_CHEAT_COASTER_CAPACITY),
+    makeWidget({ 11, 188}, {226, 14}, WidgetType::dropdownMenu, WindowColour::secondary, STR_CHEAT_CAPACITY_SELECT_RIDE),
+    makeWidget({225, 189}, { 11, 12}, WidgetType::button, WindowColour::secondary, STR_DROPDOWN_GLYPH),
+    makeHoldableSpinnerWidgets({120, 210}, kCheatSpinnerSize, WidgetType::spinner, WindowColour::secondary),
+    makeWidget({ 11, 232}, kCheatButtonSize, WidgetType::button, WindowColour::secondary, STR_CHEAT_CAPACITY_APPLY),
+    makeWidget({127, 232}, kCheatButtonSize, WidgetType::button, WindowColour::secondary, STR_CHEAT_CAPACITY_DEFAULT),
+    makeWidget({ 11, 256}, {226, 40}, WidgetType::label, WindowColour::secondary)
 );
 
 static constexpr std::span<const Widget> window_cheats_page_widgets[] =
@@ -411,6 +434,10 @@ static StringId window_cheats_page_titles[] = {
         int32_t _daySpinnerValue = 1;
         u8string _moneyButtonText = FormatStringID(STR_CURRENCY_FORMAT, 1000.00_GBP);
         u8string _weatherDropdownText{};
+        RideId _capacityRide = RideId::GetNull();
+        uint32_t _capacityValue = 100;
+        std::string _capacityRideText;
+        std::vector<RideId> _capacityRides;
 
     public:
         void onOpen() override
@@ -429,6 +456,9 @@ static StringId window_cheats_page_titles[] = {
         {
             switch (page)
             {
+                case WINDOW_CHEATS_PAGE_CUSTOM:
+                    onMouseDownCustom(widgetIndex);
+                    break;
                 case WINDOW_CHEATS_PAGE_MONEY:
                     onMouseDownMoney(widgetIndex);
                     break;
@@ -495,7 +525,18 @@ static StringId window_cheats_page_titles[] = {
 
         void onDropdown(WidgetIndex widgetIndex, int32_t selectedIndex) override
         {
-            if (page == WINDOW_CHEATS_PAGE_STAFF)
+            if (page == WINDOW_CHEATS_PAGE_CUSTOM && widgetIndex == WIDX_CAPACITY_RIDE_DROPDOWN)
+            {
+                if (selectedIndex >= 0 && static_cast<size_t>(selectedIndex) < _capacityRides.size())
+                {
+                    _capacityRide = _capacityRides[selectedIndex];
+                    auto* ride = GetRide(_capacityRide);
+                    if (ride && CapacityOverride::Get(*ride) != 0)
+                        _capacityValue = CapacityOverride::Get(*ride);
+                    invalidate();
+                }
+            }
+            else if (page == WINDOW_CHEATS_PAGE_STAFF)
             {
                 onDropdownStaff(widgetIndex, selectedIndex);
             }
@@ -575,6 +616,20 @@ static StringId window_cheats_page_titles[] = {
                     setCheckboxValue(WIDX_AUTOMATIC_PRICING, gameState.cheats.automaticPricing);
                     setCheckboxValue(WIDX_SMART_GUEST_NAVIGATION, gameState.cheats.smartGuestNavigation);
                     setCheckboxValue(WIDX_SMART_HANDYMAN_DISPATCH, gameState.cheats.smartHandymanDispatch);
+                    if (auto* ride = GetRide(_capacityRide); ride && CapacityOverride::Supports(*ride))
+                    {
+                        _capacityRideText = ride->getName();
+                        widgets[WIDX_CAPACITY_RIDE].setString(_capacityRideText.c_str());
+                        setWidgetDisabled(WIDX_CAPACITY_APPLY, !CapacityOverride::CanSet(*ride));
+                        setWidgetDisabled(WIDX_CAPACITY_DEFAULT, !CapacityOverride::CanSet(*ride));
+                    }
+                    else
+                    {
+                        widgets[WIDX_CAPACITY_RIDE].flags.unset(WidgetFlag::textIsString);
+                        widgets[WIDX_CAPACITY_RIDE].text = STR_CHEAT_CAPACITY_SELECT_RIDE;
+                        setWidgetDisabled(WIDX_CAPACITY_APPLY, true);
+                        setWidgetDisabled(WIDX_CAPACITY_DEFAULT, true);
+                    }
                     break;
             }
 
@@ -701,6 +756,18 @@ static StringId window_cheats_page_titles[] = {
                         rt, windowPos + ScreenCoordsXY{ _xLcol - 3, widget.top - 17 }, STR_CHEAT_GUEST_PREFERRED_INTENSITY);
                 }
             }
+            else if (page == WINDOW_CHEATS_PAGE_CUSTOM)
+            {
+                drawText(rt, windowPos + ScreenCoordsXY{ 11, 100 }, STR_CHEAT_PRICING_PERCENT);
+                auto ft = Formatter();
+                ft.Add<uint16_t>(getGameState().cheats.automaticPricingPercent);
+                drawText(rt, windowPos + ScreenCoordsXY{ 122, 100 }, STR_CHEAT_PRICING_PERCENT_VALUE, ft, { colours[1] });
+                drawText(rt, windowPos + ScreenCoordsXY{ 11, 212 }, STR_CHEAT_CAPACITY_VALUE);
+                ft = Formatter();
+                ft.Add<int32_t>(_capacityValue);
+                drawText(rt, windowPos + ScreenCoordsXY{ 122, 212 }, STR_FORMAT_INTEGER, ft, { colours[1] });
+                drawTextWrapped(rt, windowPos + ScreenCoordsXY{ 11, 256 }, 226, STR_CHEAT_CAPACITY_DESCRIPTION);
+            }
             else if (page == WINDOW_CHEATS_PAGE_WEATHER)
             {
                 auto& widget = widgets[WIDX_WEATHER];
@@ -710,6 +777,22 @@ static StringId window_cheats_page_titles[] = {
 
         void onTextInput(WidgetIndex widgetIndex, std::string_view text) override
         {
+            if (page == WINDOW_CHEATS_PAGE_CUSTOM && widgetIndex == WIDX_PRICING_PERCENT && !text.empty())
+            {
+                uint32_t value{};
+                auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+                if (result.ec == std::errc{} && result.ptr == text.data() + text.size() && value <= 100)
+                    CheatsSet(CheatType::automaticPricingPercent, value);
+            }
+            if (page == WINDOW_CHEATS_PAGE_CUSTOM && widgetIndex == WIDX_CAPACITY_VALUE)
+            {
+                uint32_t value{};
+                auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+                if (result.ec == std::errc{} && result.ptr == text.data() + text.size()
+                    && value <= CapacityOverride::kMaxCapacity)
+                    _capacityValue = value;
+                invalidate();
+            }
             if (page == WINDOW_CHEATS_PAGE_MONEY && widgetIndex == WIDX_MONEY_SPINNER)
             {
                 auto val = StringToMoney(std::string(text).c_str());
@@ -1280,11 +1363,63 @@ static StringId window_cheats_page_titles[] = {
             }
         }
 
+        void onMouseDownCustom(WidgetIndex widgetIndex)
+        {
+            if (widgetIndex == WIDX_PRICING_PERCENT_UP || widgetIndex == WIDX_PRICING_PERCENT_DOWN)
+            {
+                const auto current = getGameState().cheats.automaticPricingPercent;
+                const auto next = widgetIndex == WIDX_PRICING_PERCENT_UP ? std::min<int32_t>(100, current + 1)
+                                                                         : std::max<int32_t>(0, current - 1);
+                CheatsSet(CheatType::automaticPricingPercent, next);
+            }
+            else if (widgetIndex == WIDX_CAPACITY_UP)
+                _capacityValue = std::min(CapacityOverride::kMaxCapacity, _capacityValue + 1);
+            else if (widgetIndex == WIDX_CAPACITY_DOWN)
+                _capacityValue = _capacityValue == 0 ? 0 : _capacityValue - 1;
+            else if (widgetIndex == WIDX_CAPACITY_RIDE_DROPDOWN)
+            {
+                _capacityRides.clear();
+                for (const auto& ride : RideManager(getGameState()))
+                {
+                    if (!CapacityOverride::Supports(ride))
+                        continue;
+                    gDropdown.items[_capacityRides.size()] = Dropdown::MenuLabel(ride.getName());
+                    _capacityRides.push_back(ride.id);
+                }
+                if (_capacityRides.empty())
+                    return;
+                const auto& widget = widgets[WIDX_CAPACITY_RIDE];
+                WindowDropdownShowTextCustomWidth(
+                    windowPos + ScreenCoordsXY{ widget.left, widget.top }, widget.height(), colours[1], 0, {},
+                    _capacityRides.size(), widget.width() - 4);
+            }
+            invalidate();
+        }
+
         void onMouseUpCustom(WidgetIndex widgetIndex)
         {
             const auto& cheats = getGameState().cheats;
             switch (widgetIndex)
             {
+                case WIDX_PRICING_PERCENT:
+                    WindowTextInputRawOpen(
+                        this, WIDX_PRICING_PERCENT, STR_CHEAT_AUTOMATIC_PRICING, STR_CHEAT_PRICING_PERCENT_INPUT, {},
+                        std::to_string(getGameState().cheats.automaticPricingPercent).c_str(), 4);
+                    break;
+                case WIDX_CAPACITY_VALUE:
+                    WindowTextInputRawOpen(
+                        this, WIDX_CAPACITY_VALUE, STR_CHEAT_COASTER_CAPACITY, STR_CHEAT_CAPACITY_INPUT, {},
+                        std::to_string(_capacityValue).c_str(), 6);
+                    break;
+                case WIDX_CAPACITY_APPLY:
+                case WIDX_CAPACITY_DEFAULT:
+                    if (auto* ride = GetRide(_capacityRide); ride && CapacityOverride::CanSet(*ride))
+                    {
+                        if (widgetIndex == WIDX_CAPACITY_DEFAULT)
+                            _capacityValue = 0;
+                        CheatsSet(CheatType::setRideCapacity, _capacityRide.ToUnderlying(), _capacityValue);
+                    }
+                    break;
                 case WIDX_DISABLE_GUEST_CROWDING:
                     CheatsSet(CheatType::disableGuestCrowding, !cheats.disableGuestCrowding);
                     break;

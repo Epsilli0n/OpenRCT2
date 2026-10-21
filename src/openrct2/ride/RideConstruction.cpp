@@ -38,6 +38,7 @@
 #include "../world/tile_element/PathElement.h"
 #include "../world/tile_element/TileElement.h"
 #include "../world/tile_element/TrackElement.h"
+#include "CapacityOverride.h"
 #include "Ride.h"
 #include "RideData.h"
 #include "TrackData.h"
@@ -458,6 +459,7 @@ namespace OpenRCT2
      */
     void Ride::removePeeps()
     {
+        CapacityOverride::ClearPassengers(id);
         // Find first station
         auto stationIndex = RideGetFirstValidStationStart(*this);
 

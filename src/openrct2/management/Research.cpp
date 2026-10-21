@@ -58,6 +58,15 @@ const StringId kResearchFundingLevelNames[] = {
     STR_RESEARCH_FUNDING_MINIMUM,
     STR_RESEARCH_FUNDING_NORMAL,
     STR_RESEARCH_FUNDING_MAXIMUM,
+    STR_RESEARCH_FUNDING_MAXIMUM_2X,
+    STR_RESEARCH_FUNDING_MAXIMUM_3X,
+    STR_RESEARCH_FUNDING_MAXIMUM_4X,
+    STR_RESEARCH_FUNDING_MAXIMUM_5X,
+    STR_RESEARCH_FUNDING_MAXIMUM_6X,
+    STR_RESEARCH_FUNDING_MAXIMUM_7X,
+    STR_RESEARCH_FUNDING_MAXIMUM_8X,
+    STR_RESEARCH_FUNDING_MAXIMUM_9X,
+    STR_RESEARCH_FUNDING_MAXIMUM_10X,
 };
 // clang-format on
 
@@ -92,10 +101,23 @@ void ResearchUpdateUncompletedTypes()
  *
  *  rct2: 0x00684D2A
  */
-static void ResearchCalculateExpectedDate()
+uint8_t ResearchGetFundingMultiplier(const GameState_t& gameState)
+{
+    return gameState.researchFundingLevel == RESEARCH_FUNDING_MAXIMUM
+        ? std::clamp<uint8_t>(gameState.researchFundingMultiplier, 1, kResearchMaxFundingMultiplier)
+        : 1;
+}
+
+uint8_t ResearchGetFundingOption(const GameState_t& gameState)
+{
+    return gameState.researchFundingLevel + ResearchGetFundingMultiplier(gameState) - 1;
+}
+
+void ResearchCalculateExpectedDate()
 {
     auto& gameState = getGameState();
     if (gameState.researchProgressStage == RESEARCH_STAGE_INITIAL_RESEARCH
+        || gameState.researchProgressStage == RESEARCH_STAGE_FINISHED_ALL
         || gameState.researchFundingLevel == RESEARCH_FUNDING_NONE)
     {
         gameState.researchExpectedDay = 255;
@@ -106,7 +128,8 @@ static void ResearchCalculateExpectedDate()
 
         int32_t progressRemaining = gameState.researchProgressStage == RESEARCH_STAGE_COMPLETING_DESIGN ? 0x10000 : 0x20000;
         progressRemaining -= gameState.researchProgress;
-        int32_t daysRemaining = (progressRemaining / _researchRate[gameState.researchFundingLevel]) * 128;
+        const auto rate = _researchRate[gameState.researchFundingLevel] * ResearchGetFundingMultiplier(gameState);
+        int32_t daysRemaining = (progressRemaining / rate) * 128;
 
         int32_t expectedDay = date.GetMonthTicks() + (daysRemaining & 0xFFFF);
         int32_t dayQuotient = expectedDay / 0x10000;
@@ -325,48 +348,57 @@ void ResearchUpdate()
         return;
     }
 
-    if (gameState.park.flags.has(ParkFlag::noMoney) && gameState.researchFundingLevel == RESEARCH_FUNDING_NONE)
+    // Repeat the original update so every tier scales speed exactly, including
+    // stage transitions, without losing a larger overflow at higher rates.
+    const auto updates = ResearchGetFundingMultiplier(gameState);
+    for (uint8_t update = 0; update < updates; ++update)
     {
-        researchLevel = RESEARCH_FUNDING_NORMAL;
-    }
-    else
-    {
-        researchLevel = gameState.researchFundingLevel;
-    }
-
-    currentResearchProgress = gameState.researchProgress;
-    currentResearchProgress += _researchRate[researchLevel];
-    if (currentResearchProgress <= 0xFFFF)
-    {
-        gameState.researchProgress = currentResearchProgress;
-    }
-    else
-    {
-        switch (gameState.researchProgressStage)
+        if (gameState.park.flags.has(ParkFlag::noMoney) && gameState.researchFundingLevel == RESEARCH_FUNDING_NONE)
         {
-            case RESEARCH_STAGE_INITIAL_RESEARCH:
-                ResearchNextDesign();
-                ResearchCalculateExpectedDate();
-                break;
-            case RESEARCH_STAGE_DESIGNING:
-                gameState.researchProgress = 0;
-                gameState.researchProgressStage = RESEARCH_STAGE_COMPLETING_DESIGN;
-                ResearchCalculateExpectedDate();
-                ResearchInvalidateRelatedWindows();
-                break;
-            case RESEARCH_STAGE_COMPLETING_DESIGN:
-                MarkResearchItemInvented(*gameState.researchNextItem);
-                ResearchFinishItem(*gameState.researchNextItem);
-                gameState.researchProgress = 0;
-                gameState.researchProgressStage = RESEARCH_STAGE_INITIAL_RESEARCH;
-                ResearchCalculateExpectedDate();
-                ResearchUpdateUncompletedTypes();
-                ResearchInvalidateRelatedWindows();
-                break;
-            case RESEARCH_STAGE_FINISHED_ALL:
-                gameState.researchFundingLevel = RESEARCH_FUNDING_NONE;
-                break;
+            researchLevel = RESEARCH_FUNDING_NORMAL;
         }
+        else
+        {
+            researchLevel = gameState.researchFundingLevel;
+        }
+
+        currentResearchProgress = gameState.researchProgress;
+        currentResearchProgress += _researchRate[researchLevel];
+        if (currentResearchProgress <= 0xFFFF)
+        {
+            gameState.researchProgress = currentResearchProgress;
+        }
+        else
+        {
+            switch (gameState.researchProgressStage)
+            {
+                case RESEARCH_STAGE_INITIAL_RESEARCH:
+                    ResearchNextDesign();
+                    ResearchCalculateExpectedDate();
+                    break;
+                case RESEARCH_STAGE_DESIGNING:
+                    gameState.researchProgress = 0;
+                    gameState.researchProgressStage = RESEARCH_STAGE_COMPLETING_DESIGN;
+                    ResearchCalculateExpectedDate();
+                    ResearchInvalidateRelatedWindows();
+                    break;
+                case RESEARCH_STAGE_COMPLETING_DESIGN:
+                    MarkResearchItemInvented(*gameState.researchNextItem);
+                    ResearchFinishItem(*gameState.researchNextItem);
+                    gameState.researchProgress = 0;
+                    gameState.researchProgressStage = RESEARCH_STAGE_INITIAL_RESEARCH;
+                    ResearchCalculateExpectedDate();
+                    ResearchUpdateUncompletedTypes();
+                    ResearchInvalidateRelatedWindows();
+                    break;
+                case RESEARCH_STAGE_FINISHED_ALL:
+                    gameState.researchFundingLevel = RESEARCH_FUNDING_NONE;
+                    gameState.researchFundingMultiplier = 1;
+                    break;
+            }
+        }
+        if (gameState.researchProgressStage == RESEARCH_STAGE_FINISHED_ALL)
+            break;
     }
 }
 

@@ -102,6 +102,8 @@ namespace OpenRCT2::Scripting
         JS_UNPACK_UINT32(val, ctx, value);
         getGameState().researchFundingLevel = std::clamp<uint8_t>(
             static_cast<uint8_t>(val), RESEARCH_FUNDING_NONE, RESEARCH_FUNDING_MAXIMUM);
+        getGameState().researchFundingMultiplier = 1;
+        ResearchCalculateExpectedDate();
         return JS_UNDEFINED;
     }
 

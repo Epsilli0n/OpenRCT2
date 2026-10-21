@@ -2107,6 +2107,7 @@ namespace OpenRCT2::RCT1
             }
             gameState.researchPriorities = activeResearchTypes;
             gameState.researchFundingLevel = _s4.ResearchLevel;
+            gameState.researchFundingMultiplier = 1;
 
             // This will mark items as researched/unresearched according to the research list.
             // This needs to be called before importing progress, as it will reset it.

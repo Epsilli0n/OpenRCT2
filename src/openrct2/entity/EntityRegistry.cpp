@@ -21,6 +21,7 @@
 #include "../interface/Viewport.h"
 #include "../peep/RideUseSystem.h"
 #include "../profiling/Profiling.h"
+#include "../ride/CapacityOverride.h"
 #include "../ride/Vehicle.h"
 #include "../world/Map.h"
 #include "Balloon.h"
@@ -208,6 +209,8 @@ namespace OpenRCT2
         ChecksumStream ms(checksum.raw);
         DataSerialiser ds(true, ms);
         networkSerialiseEntityTypes<Guest, Staff, Vehicle, Litter>(ds);
+        CapacityOverride::Serialise(getGameState(), ds);
+        ds << getGameState().researchFundingMultiplier << getGameState().cheats.automaticPricingPercent;
 
         return checksum;
     }
@@ -447,6 +450,10 @@ namespace OpenRCT2
      */
     void EntityRegistry::entityRemove(EntityBase* entity)
     {
+        if (entity->is<Guest>())
+            CapacityOverride::RemovePassenger(entity->id);
+        else if (entity->is<Vehicle>())
+            CapacityOverride::ForgetVehicle(entity->id);
         freeEntity(*entity);
 
         EntityTweener::get().removeEntity(entity);

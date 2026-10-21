@@ -717,8 +717,8 @@ namespace OpenRCT2::Ui::Windows
             auto carDropdownIndex = -1;
             for (auto carIndex = 0; carIndex < ride->numCarsPerTrain; carIndex++)
             {
-                const auto& carEntry = rideEntry->Cars[RideEntryGetVehicleAtPosition(
-                    ride->subtype, ride->numCarsPerTrain, carIndex)];
+                const auto&
+                    carEntry = rideEntry->Cars[RideEntryGetVehicleAtPosition(ride->subtype, ride->numCarsPerTrain, carIndex)];
                 if (!carEntry.isVisible())
                     continue;
 
@@ -748,8 +748,8 @@ namespace OpenRCT2::Ui::Windows
             auto carDropdownIndex = -1;
             for (auto carIndex = 0; carIndex < ride->numCarsPerTrain; carIndex++)
             {
-                const auto& carEntry = rideEntry->Cars[RideEntryGetVehicleAtPosition(
-                    ride->subtype, ride->numCarsPerTrain, carIndex)];
+                const auto&
+                    carEntry = rideEntry->Cars[RideEntryGetVehicleAtPosition(ride->subtype, ride->numCarsPerTrain, carIndex)];
                 if (!carEntry.isVisible())
                     continue;
 
@@ -2896,8 +2896,16 @@ namespace OpenRCT2::Ui::Windows
 
             // Capacity
             ft = Formatter();
-            ft.Add<StringId>(rideEntry->capacity);
-            drawText(rt, screenCoords, STR_CAPACITY, ft);
+            if (const auto capacity = CapacityOverride::Get(*ride); capacity != 0)
+            {
+                ft.Add<uint16_t>(capacity);
+                drawText(rt, screenCoords, STR_CAPACITY_OVERRIDE, ft);
+            }
+            else
+            {
+                ft.Add<StringId>(rideEntry->capacity);
+                drawText(rt, screenCoords, STR_CAPACITY, ft);
+            }
 
             // Excitement Factor
             if (rideEntry->excitement_multiplier != 0)
@@ -5297,8 +5305,8 @@ namespace OpenRCT2::Ui::Windows
             auto trainCarIndex = ride->vehicleColourSettings == VehicleColourSettings::perCar ? _vehicleIndex
                                                                                               : rideEntry->TabCar;
 
-            const auto& carEntry = rideEntry->Cars[RideEntryGetVehicleAtPosition(
-                ride->subtype, ride->numCarsPerTrain, trainCarIndex)];
+            const auto&
+                carEntry = rideEntry->Cars[RideEntryGetVehicleAtPosition(ride->subtype, ride->numCarsPerTrain, trainCarIndex)];
 
             screenCoords.y += carEntry.tabHeight;
 

@@ -16,6 +16,7 @@
 #include "entity/EntityRegistry.h"
 #include "interface/ZoomLevel.h"
 #include "peep/SmartPathfinding.h"
+#include "ride/CapacityOverride.h"
 #include "ride/Ride.h"
 #include "ride/RideRatings.h"
 #include "scenario/ScenarioOptions.h"
@@ -77,6 +78,7 @@ namespace OpenRCT2
         CoordsXY widePathTileLoopPosition;
 
         uint8_t researchFundingLevel;
+        uint8_t researchFundingMultiplier = 1;
         uint8_t researchPriorities;
         uint16_t researchProgress;
         uint8_t researchProgressStage;
@@ -96,6 +98,7 @@ namespace OpenRCT2
 
         CheatsState cheats;
         SmartPathfinding::State smartPathfinding;
+        CapacityOverride::State capacityOverride;
     };
 
     GameState_t& getGameState();

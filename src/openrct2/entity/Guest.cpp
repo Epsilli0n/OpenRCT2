@@ -42,6 +42,7 @@
 #include "../peep/PeepThoughts.h"
 #include "../peep/RideUseSystem.h"
 #include "../peep/SmartPathfinding.h"
+#include "../ride/CapacityOverride.h"
 #include "../ride/Ride.h"
 #include "../ride/RideData.h"
 #include "../ride/RideManager.hpp"
@@ -2418,6 +2419,12 @@ namespace OpenRCT2
         }
         uint8_t chosen_seat = vehicle->next_free_seat;
 
+        if (CapacityOverride::Enabled(*vehicle))
+        {
+            CapacityOverride::Reserve(*vehicle, *guest);
+            return;
+        }
+
         if (ride.mode == RideMode::forwardRotation || ride.mode == RideMode::backwardRotation)
         {
             chosen_seat = (((~vehicle->flatRideAnimationFrame + 1) >> 3) & 0xF) * 2;
@@ -2493,7 +2500,9 @@ namespace OpenRCT2
                 if (vehicle == nullptr)
                     continue;
 
-                if (vehicle->next_free_seat >= vehicle->num_seats)
+                if (CapacityOverride::Enabled(*vehicle)
+                        ? !CapacityOverride::CanReserve(*vehicle)
+                        : CapacityOverride::ReservedCount(*vehicle) >= CapacityOverride::SeatCount(*vehicle))
                     continue;
 
                 if (vehicle->status != Vehicle::Status::waitingForPassengers)
@@ -2519,6 +2528,12 @@ namespace OpenRCT2
         for (Vehicle* vehicle = getGameState().entities.getEntity<Vehicle>(vehicle_id); vehicle != nullptr;
              vehicle = getGameState().entities.getEntity<Vehicle>(vehicle->next_vehicle_on_train), ++i)
         {
+            if (CapacityOverride::Enabled(*vehicle))
+            {
+                if (CapacityOverride::CanReserve(*vehicle))
+                    car_array.push_back(i);
+                continue;
+            }
             uint8_t num_seats = vehicle->num_seats;
             if (vehicle->IsUsedInPairs())
             {
@@ -3952,7 +3967,7 @@ namespace OpenRCT2
             }
         }
 
-        if (!vehicle->IsUsedInPairs())
+        if (CapacityOverride::HasManifest(*vehicle) || !vehicle->IsUsedInPairs())
         {
             updateRideFreeVehicleEnterRide(*ride);
             return;
@@ -4026,11 +4041,12 @@ namespace OpenRCT2
 
                 if (ride->mode != RideMode::forwardRotation && ride->mode != RideMode::backwardRotation)
                 {
-                    if (currentSeat != vehicle->num_peeps)
+                    if (CapacityOverride::HasManifest(*vehicle) ? !CapacityOverride::CanBoard(*this)
+                                                                : currentSeat != vehicle->num_peeps)
                         return;
                 }
 
-                if (vehicle->IsUsedInPairs())
+                if (!CapacityOverride::HasManifest(*vehicle) && vehicle->IsUsedInPairs())
                 {
                     auto* seatedGuest = gameState.entities.getEntity<Guest>(vehicle->peep[currentSeat ^ 1]);
                     if (seatedGuest != nullptr)
@@ -4050,10 +4066,14 @@ namespace OpenRCT2
                     }
                 }
 
-                vehicle->num_peeps++;
+                if (CapacityOverride::HasManifest(*vehicle))
+                    CapacityOverride::Board(*vehicle, *this);
+                else
+                {
+                    vehicle->num_peeps++;
+                    vehicle->ApplyMass(mass);
+                }
                 ride->curNumCustomers++;
-
-                vehicle->ApplyMass(mass);
                 vehicle->invalidate();
 
                 moveTo({ kLocationNull, 0, 0 });
@@ -4092,7 +4112,8 @@ namespace OpenRCT2
         // Check if ride is NOT Ferris Wheel.
         if (ride->mode != RideMode::forwardRotation && ride->mode != RideMode::backwardRotation)
         {
-            if (vehicle->num_peeps - 1 != currentSeat)
+            if (CapacityOverride::HasManifest(*vehicle) ? !CapacityOverride::CanUnload(*this)
+                                                        : vehicle->num_peeps - 1 != currentSeat)
                 return;
         }
 
@@ -4102,8 +4123,13 @@ namespace OpenRCT2
 
         animationImageIdOffset = 0;
 
-        vehicle->num_peeps--;
-        vehicle->ApplyMass(-mass);
+        if (CapacityOverride::HasManifest(*vehicle))
+            CapacityOverride::RemovePassenger(id);
+        else
+        {
+            vehicle->num_peeps--;
+            vehicle->ApplyMass(-mass);
+        }
         vehicle->invalidate();
 
         if (ride_station.ToUnderlying() >= Limits::kMaxStationsPerRide)

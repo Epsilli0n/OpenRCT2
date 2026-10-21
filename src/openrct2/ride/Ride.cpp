@@ -58,6 +58,7 @@
 #include "../world/tile_element/PathElement.h"
 #include "../world/tile_element/TrackElement.h"
 #include "CableLift.h"
+#include "CapacityOverride.h"
 #include "RideAudio.h"
 #include "RideBreakdownMap.h"
 #include "RideConstruction.h"
@@ -216,6 +217,7 @@ namespace OpenRCT2
 
     void RideDelete(RideId id)
     {
+        CapacityOverride::ForgetRide(id);
         auto& gameState = getGameState();
         const auto idx = id.ToUnderlying();
 

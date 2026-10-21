@@ -112,7 +112,13 @@ enum
 
 extern bool gSilentResearch;
 
-extern const StringId kResearchFundingLevelNames[4];
+constexpr uint8_t kResearchMaxFundingMultiplier = 10;
+constexpr uint8_t kResearchFundingOptionCount = RESEARCH_FUNDING_MAXIMUM + kResearchMaxFundingMultiplier;
+extern const StringId kResearchFundingLevelNames[kResearchFundingOptionCount];
+
+uint8_t ResearchGetFundingMultiplier(const OpenRCT2::GameState_t& gameState);
+uint8_t ResearchGetFundingOption(const OpenRCT2::GameState_t& gameState);
+void ResearchCalculateExpectedDate();
 
 void ResearchResetItems(OpenRCT2::GameState_t& gameState);
 void ResearchUpdateUncompletedTypes();

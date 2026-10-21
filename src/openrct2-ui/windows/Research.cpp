@@ -481,9 +481,9 @@ namespace OpenRCT2::Ui::Windows
         }
         WindowDropdownShowTextCustomWidth(
             { w->windowPos.x + dropdownWidget->left, w->windowPos.y + dropdownWidget->top }, dropdownWidget->height(),
-            w->colours[1], 0, {}, 4, dropdownWidget->width() - 4);
+            w->colours[1], 0, {}, std::size(kResearchFundingLevelNames), dropdownWidget->width() - 4);
 
-        int32_t currentResearchLevel = gameState.researchFundingLevel;
+        int32_t currentResearchLevel = ResearchGetFundingOption(gameState);
         gDropdown.items[currentResearchLevel].setChecked(true);
     }
 
@@ -505,7 +505,7 @@ namespace OpenRCT2::Ui::Windows
                 auto activeResearchTypes = gameState.researchPriorities;
                 activeResearchTypes ^= 1uLL << (widgetIndex - (WIDX_TRANSPORT_RIDES + widgetOffset));
                 auto gameAction = GameActions::ParkSetResearchFundingAction(
-                    activeResearchTypes, gameState.researchFundingLevel);
+                    activeResearchTypes, ResearchGetFundingOption(gameState));
                 GameActions::Execute(&gameAction, getGameState());
                 break;
             }
@@ -541,7 +541,7 @@ namespace OpenRCT2::Ui::Windows
         }
 
         // Current funding
-        int32_t currentResearchLevel = gameState.researchFundingLevel;
+        int32_t currentResearchLevel = ResearchGetFundingOption(gameState);
         w->widgets[WIDX_RESEARCH_FUNDING + widgetOffset].text = kResearchFundingLevelNames[currentResearchLevel];
 
         // Checkboxes
@@ -563,9 +563,8 @@ namespace OpenRCT2::Ui::Windows
         if (gameState.park.flags.has(ParkFlag::noMoney))
             return;
 
-        int32_t currentResearchLevel = gameState.researchFundingLevel;
         auto ft = Formatter();
-        ft.Add<money64>(kResearchCosts[currentResearchLevel]);
+        ft.Add<money64>(FinanceGetResearchFundingCost());
         drawText(rt, w->windowPos + ScreenCoordsXY{ 10, w->widgets[WIDX_TAB_1].top + 60 }, STR_RESEARCH_COST_PER_MONTH, ft);
     }
 

@@ -61,6 +61,8 @@ namespace OpenRCT2
         gInMapInitCode = true;
         gameState.currentTicks = 0;
         SmartPathfinding::Reset(gameState);
+        gameState.capacityOverride = {};
+        gameState.researchFundingMultiplier = 1;
 
         MapInit(mapSize, isInTrackDesignerOrManager() ? Drawing::Colour::darkBlue : Drawing::Colour::black);
         Park::Initialise(gameState.park, gameState);

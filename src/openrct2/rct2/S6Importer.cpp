@@ -396,6 +396,7 @@ namespace OpenRCT2::RCT2
 
             park.guestChangeModifier = _s6.GuestCountChangeModifier;
             gameState.researchFundingLevel = _s6.CurrentResearchLevel;
+            gameState.researchFundingMultiplier = 1;
             // Pad01357400
             // _s6.ResearchedTrackTypesA
             // _s6.ResearchedTrackTypesB

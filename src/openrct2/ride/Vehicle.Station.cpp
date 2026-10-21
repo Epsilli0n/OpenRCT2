@@ -21,6 +21,7 @@
 #include "../world/Map.h"
 #include "../world/tile_element/TileElement.h"
 #include "../world/tile_element/TrackElement.h"
+#include "CapacityOverride.h"
 #include "Ride.h"
 #include "RideData.h"
 #include "TrackIteration.h"
@@ -455,7 +456,7 @@ void Vehicle::UpdateMovingToEndOfStation()
  *
  *  rct2: 0x006D7FB4
  */
-void Vehicle::TrainReadyToDepart(uint8_t num_peeps_on_train, uint8_t num_used_seats)
+void Vehicle::TrainReadyToDepart(uint32_t num_peeps_on_train, uint32_t num_used_seats)
 {
     if (num_peeps_on_train != num_used_seats)
         return;
@@ -545,6 +546,10 @@ void Vehicle::UpdateWaitingForPassengers()
         station.trainAtStation = trainIndex.value();
         sub_state = 1;
         time_waiting = 0;
+        // A returning train may still have its previous departure flag. Reopen
+        // capacity-override admission for this station visit.
+        if (CapacityOverride::Get(*curRide) != 0)
+            flags.unset(VehicleFlag::readyToDepart);
 
         invalidate();
         return;
@@ -557,17 +562,15 @@ void Vehicle::UpdateWaitingForPassengers()
         flags.unset(VehicleFlag::readyToDepart);
 
         // 0xF64E31, 0xF64E32, 0xF64E33
-        uint8_t num_peeps_on_train = 0, num_used_seats_on_train = 0, num_seats_on_train = 0;
+        uint32_t num_peeps_on_train = 0, num_used_seats_on_train = 0, num_seats_on_train = 0;
 
         for (const Vehicle* trainCar = getGameState().entities.getEntity<Vehicle>(id); trainCar != nullptr;
              trainCar = getGameState().entities.getEntity<Vehicle>(trainCar->next_vehicle_on_train))
         {
-            num_peeps_on_train += trainCar->num_peeps;
-            num_used_seats_on_train += trainCar->next_free_seat;
-            num_seats_on_train += trainCar->num_seats;
+            num_peeps_on_train += CapacityOverride::BoardedCount(*trainCar);
+            num_used_seats_on_train += CapacityOverride::ReservedCount(*trainCar);
+            num_seats_on_train += CapacityOverride::SeatCount(*trainCar);
         }
-
-        num_seats_on_train &= 0x7F;
 
         if (curRide->supportsStatus(RideStatus::testing))
         {
@@ -646,7 +649,7 @@ void Vehicle::UpdateWaitingForPassengers()
             // We want to wait for ceiling((load+1)/4 * num_seats_on_train) peeps, the +3 below is used instead of
             // ceil() to prevent issues on different cpus/platforms with floats. Note that vanilla RCT1/2 rounded
             // down here; our change reflects the expected behaviour for waiting for a minimum load target (see #9987)
-            uint8_t peepTarget = ((load + 1) * num_seats_on_train + 3) / 4;
+            uint32_t peepTarget = ((load + 1) * num_seats_on_train + 3) / 4;
 
             if (load == 4) // take care of "any load" special case
                 peepTarget = 1;
@@ -732,7 +735,7 @@ void Vehicle::UpdateWaitingToDepart()
             for (const Vehicle* trainCar = getGameState().entities.getEntity<Vehicle>(id); trainCar != nullptr;
                  trainCar = getGameState().entities.getEntity<Vehicle>(trainCar->next_vehicle_on_train))
             {
-                if (trainCar->num_peeps != 0)
+                if (CapacityOverride::BoardedCount(*trainCar) != 0)
                 {
                     if (!currentStation.exit.isNull())
                     {
@@ -970,6 +973,22 @@ void Vehicle::UpdateUnloadingPassengers()
             if (train->restraints_position != 255)
                 continue;
 
+            if (CapacityOverride::HasManifest(*train))
+            {
+                if (CapacityOverride::BeginUnloading(*train))
+                {
+                    for (auto guestId : CapacityOverride::Passengers(*train))
+                    {
+                        if (auto* guest = getGameState().entities.tryGetEntity<Guest>(guestId))
+                        {
+                            guest->setState(PeepState::leavingRide);
+                            guest->rideSubState = PeepRideSubState::leaveVehicle;
+                        }
+                    }
+                }
+                continue;
+            }
+
             if (train->next_free_seat == 0)
                 continue;
 
@@ -992,7 +1011,7 @@ void Vehicle::UpdateUnloadingPassengers()
     for (Vehicle* train = getGameState().entities.getEntity<Vehicle>(id); train != nullptr;
          train = getGameState().entities.getEntity<Vehicle>(train->next_vehicle_on_train))
     {
-        if (train->num_peeps != train->next_free_seat)
+        if (CapacityOverride::BoardedCount(*train) != CapacityOverride::ReservedCount(*train))
             return;
     }
 

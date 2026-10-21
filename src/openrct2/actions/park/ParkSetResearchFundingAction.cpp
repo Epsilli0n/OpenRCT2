@@ -43,7 +43,7 @@ namespace OpenRCT2::GameActions
 
     Result ParkSetResearchFundingAction::Query(GameState_t& gameState, Park::ParkData& park) const
     {
-        if (_fundingAmount >= RESEARCH_FUNDING_COUNT)
+        if (_fundingAmount >= kResearchFundingOptionCount)
         {
             LOG_ERROR("Invalid research funding amount %d", _fundingAmount);
             return Result(Status::invalidParameters, STR_ERR_INVALID_PARAMETER, STR_ERR_VALUE_OUT_OF_RANGE);
@@ -53,8 +53,16 @@ namespace OpenRCT2::GameActions
 
     Result ParkSetResearchFundingAction::Execute(GameState_t& gameState, Park::ParkData& park) const
     {
+        auto result = Query(gameState, park);
+        if (result.error != Status::ok)
+            return result;
         gameState.researchPriorities = _priorities;
-        gameState.researchFundingLevel = _fundingAmount;
+        // Keep the native funding field in its original range for old saves and plugins.
+        gameState.researchFundingLevel = std::min<uint8_t>(_fundingAmount, RESEARCH_FUNDING_MAXIMUM);
+        gameState.researchFundingMultiplier = _fundingAmount > RESEARCH_FUNDING_MAXIMUM
+            ? _fundingAmount - RESEARCH_FUNDING_MAXIMUM + 1
+            : 1;
+        ResearchCalculateExpectedDate();
 
         auto windowManager = Ui::GetWindowManager();
         windowManager->BroadcastIntent(Intent(INTENT_ACTION_UPDATE_RESEARCH));

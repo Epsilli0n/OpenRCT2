@@ -97,6 +97,14 @@ namespace OpenRCT2::GameActions
             return Result(Status::invalidParameters, STR_ERR_INVALID_PARAMETER, STR_ERR_VALUE_OUT_OF_RANGE);
         }
 
+        if (static_cast<CheatType>(_cheatType.id) == CheatType::setRideCapacity)
+        {
+            auto* ride = GetRide(RideId::FromUnderlying(static_cast<uint16_t>(_param1)));
+            if (!ride || !CapacityOverride::Supports(*ride))
+                return Result(Status::invalidParameters, STR_ERR_INVALID_PARAMETER, STR_ERR_VALUE_OUT_OF_RANGE);
+            if (!CapacityOverride::CanSet(*ride))
+                return Result(Status::disallowed, STR_CHEAT_COASTER_CAPACITY, STR_CHEAT_CAPACITY_CLOSE_EMPTY);
+        }
         return Result();
     }
 
@@ -106,6 +114,25 @@ namespace OpenRCT2::GameActions
 
         switch (static_cast<CheatType>(_cheatType.id))
         {
+            case CheatType::automaticPricingPercent:
+            {
+                auto result = Query(gameState, park);
+                if (result.error != Status::ok)
+                    return result;
+                gameState.cheats.automaticPricingPercent = static_cast<uint8_t>(_param1);
+                CheatsUpdateAutomaticPrices(true);
+                break;
+            }
+            case CheatType::setRideCapacity:
+            {
+                auto result = Query(gameState, park);
+                if (result.error != Status::ok)
+                    return result;
+                auto* ride = GetRide(RideId::FromUnderlying(static_cast<uint16_t>(_param1)));
+                CapacityOverride::Set(*ride, static_cast<uint16_t>(_param2));
+                windowMgr->InvalidateByClass(WindowClass::ride);
+                break;
+            }
             case CheatType::sandboxMode:
                 gameState.cheats.sandboxMode = _param1 != 0;
                 windowMgr->InvalidateByClass(WindowClass::map);
@@ -311,6 +338,10 @@ namespace OpenRCT2::GameActions
     {
         switch (static_cast<CheatType>(_cheatType.id))
         {
+            case CheatType::automaticPricingPercent:
+                return { { 0, 100 }, { 0, 0 } };
+            case CheatType::setRideCapacity:
+                return { { 0, Limits::kMaxRidesInPark - 1 }, { 0, CapacityOverride::kMaxCapacity } };
             case CheatType::sandboxMode:
                 [[fallthrough]];
             case CheatType::disableClearanceChecks:
@@ -737,6 +768,7 @@ namespace OpenRCT2::GameActions
 
     void CheatSetAction::RemoveAllGuests(GameState_t& gameState) const
     {
+        CapacityOverride::ClearPassengers();
         for (auto& ride : RideManager(gameState))
         {
             ride.numRiders = 0;

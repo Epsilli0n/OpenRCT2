@@ -38,6 +38,7 @@ constexpr uint8_t kFinanceHistorySize = 128;
 constexpr uint8_t kMaxBankLoanInterestRate = 255;
 
 extern const money64 kResearchCosts[RESEARCH_FUNDING_COUNT];
+money64 FinanceGetResearchFundingCost();
 
 bool FinanceCheckMoneyRequired(OpenRCT2::GameActions::CommandFlags flags);
 bool FinanceCheckAffordability(money64 cost, OpenRCT2::GameActions::CommandFlags flags);

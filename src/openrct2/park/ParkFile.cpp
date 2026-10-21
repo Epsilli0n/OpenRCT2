@@ -101,6 +101,8 @@ namespace OpenRCT2
         preview                 = 0x39,
         // Private extension: saved dispatch history, optional for stock/older saves.
         smartPathfinding        = 0x434f4458,
+        capacityOverride        = 0x43415041,
+        extendedResearch        = 0x52534348,
         packedObjects           = 0x80
         // clang-format on
     };
@@ -131,7 +133,8 @@ namespace OpenRCT2
         void ThrowIfIncompatibleVersion()
         {
             const auto& header = _os->getHeader();
-            if (/*header.targetVersion < kParkFileMinSupportedVersion || */ header.minVersion > kParkFileCurrentVersion)
+            if (header.minVersion > kParkFileCurrentVersion
+                && (header.minVersion != kParkFileCapacityOverrideMinVersion || header.targetVersion > kParkFileCurrentVersion))
             {
                 throw UnsupportedVersionException(header.minVersion, header.targetVersion);
             }
@@ -177,6 +180,7 @@ namespace OpenRCT2
             ReadWriteParkChunk(gameState, os);
             ReadWriteClimateChunk(gameState, os);
             ReadWriteResearchChunk(gameState, os);
+            ReadWriteExtendedResearchChunk(gameState, os);
             ReadWriteNotificationsChunk(gameState.park.newsItems, os);
             ReadWriteInterfaceChunk(gameState, os);
             ReadWriteCheatsChunk(gameState, os);
@@ -184,6 +188,7 @@ namespace OpenRCT2
             ReadWritePluginStorageChunk(gameState, os);
 
             ReadWriteSmartPathfindingChunk(gameState, os);
+            ReadWriteCapacityOverrideChunk(gameState, os);
 
             auto targetVersion = os.getHeader().targetVersion;
 
@@ -208,7 +213,8 @@ namespace OpenRCT2
             auto& header = os.getHeader();
             header.magic = kParkFileMagic;
             header.targetVersion = kParkFileCurrentVersion;
-            header.minVersion = kParkFileMinVersion;
+            header.minVersion = gameState.capacityOverride.overrides.empty() ? kParkFileMinVersion
+                                                                             : kParkFileCapacityOverrideMinVersion;
 
             ReadWriteAuthoringChunk(os);
             ReadWriteObjectsChunk(os);
@@ -221,6 +227,7 @@ namespace OpenRCT2
             ReadWriteParkChunk(gameState, os);
             ReadWriteClimateChunk(gameState, os);
             ReadWriteResearchChunk(gameState, os);
+            ReadWriteExtendedResearchChunk(gameState, os);
             ReadWriteNotificationsChunk(gameState.park.newsItems, os);
             ReadWriteInterfaceChunk(gameState, os);
             ReadWriteCheatsChunk(gameState, os);
@@ -228,6 +235,7 @@ namespace OpenRCT2
             ReadWritePluginStorageChunk(gameState, os);
             ReadWritePreviewChunk(gameState, os);
             ReadWriteSmartPathfindingChunk(gameState, os);
+            ReadWriteCapacityOverrideChunk(gameState, os);
             ReadWritePackedObjectsChunk(os);
         }
 
@@ -812,6 +820,22 @@ namespace OpenRCT2
             });
         }
 
+        void ReadWriteCapacityOverrideChunk(GameState_t& gameState, OrcaStream& os)
+        {
+            if (os.getMode() == OrcaStream::Mode::reading)
+                gameState.capacityOverride = {};
+            if (os.getMode() == OrcaStream::Mode::writing && gameState.capacityOverride.overrides.empty())
+                return;
+            const auto found = os.readWriteChunk(
+                ParkFileChunkType::capacityOverride, [&gameState](OrcaStream::ChunkStream& cs) {
+                    DataSerialiser ds(cs.getMode() == OrcaStream::Mode::writing, cs.getStream());
+                    CapacityOverride::Serialise(gameState, ds);
+                });
+            if (os.getMode() == OrcaStream::Mode::reading && os.getHeader().minVersion == kParkFileCapacityOverrideMinVersion
+                && !found)
+                throw std::runtime_error("Missing capacity override data");
+        }
+
         void ReadWriteRestrictedObjectsChunk(GameState_t& gameState, OrcaStream& os)
         {
             os.readWriteChunk(ParkFileChunkType::restrictedObjects, [](OrcaStream::ChunkStream& cs) {
@@ -1191,6 +1215,23 @@ namespace OpenRCT2
                     gameState.researchItemsUninvented, [&cs](ResearchItem& item) { ReadWriteResearchItem(cs, item); });
                 cs.readWriteVector(
                     gameState.researchItemsInvented, [&cs](ResearchItem& item) { ReadWriteResearchItem(cs, item); });
+            });
+        }
+
+        void ReadWriteExtendedResearchChunk(GameState_t& gameState, OrcaStream& os)
+        {
+            if (os.getMode() == OrcaStream::Mode::reading)
+                gameState.researchFundingMultiplier = 1;
+            if (os.getMode() == OrcaStream::Mode::writing && gameState.researchFundingMultiplier == 1)
+                return;
+            os.readWriteChunk(ParkFileChunkType::extendedResearch, [&gameState](OrcaStream::ChunkStream& cs) {
+                uint8_t version = 1;
+                cs.readWrite(version);
+                cs.readWrite(gameState.researchFundingMultiplier);
+                if (version != 1 || gameState.researchFundingMultiplier < 1
+                    || gameState.researchFundingMultiplier > kResearchMaxFundingMultiplier
+                    || (gameState.researchFundingLevel != RESEARCH_FUNDING_MAXIMUM && gameState.researchFundingMultiplier != 1))
+                    throw std::runtime_error("Invalid extended research funding");
             });
         }
 

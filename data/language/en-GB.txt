@@ -3875,7 +3875,7 @@ STR_7081    :Silver
 STR_7082    :Disable guest overcrowding
 STR_7083    :Prevents overcrowding complaints and happiness penalties, and removes guest arrival limits caused by high guest numbers.
 STR_7084    :Automatic ride and shop pricing
-STR_7085    :Sets ride, shop, photo and toilet prices to the highest amount guests reliably accept. Updates daily and every few seconds for changes in value, weather and park admission. Guests still need enough cash. Turning this off leaves the current prices in place.
+STR_7085    :Automatically refresh ride and shop prices at the selected percentage of the maximum eligible guests reliably accept.
 STR_7086    :Smart guest navigation
 STR_7087    :Guests consider destinations throughout the park and follow complete routes to reachable rides, facilities and exits. Routes respect path heights, queues and no-entry signs, and refresh when paths change.
 STR_7088    :Smart handyman dispatch
@@ -3884,3 +3884,27 @@ STR_7090    :Heading to clean litter
 STR_7091    :Heading to empty a full bin
 STR_7092    :Visiting neglected paths
 STR_7093    :Custom cheats
+
+STR_7094    :Coaster car capacity
+STR_7095    :Close the ride and wait until every guest has left before changing capacity.
+STR_7096    :Select a roller coaster
+STR_7097    :Guests per car:
+STR_7098    :Apply
+STR_7099    :Use default
+STR_7100    :{SMALLFONT}Extra riders use the original car graphics. Close and empty the ride to change capacity. Saves with overrides require this custom build.
+STR_7101    :Capacity: {UINT16} passengers per car (custom)
+STR_7102    :Enter guests per car (1-65535). Use 0 for the original capacity.
+
+STR_7103    :Price target:
+STR_7104    :Set automatic prices to this percentage of the maximum guests accept (0-100%).
+STR_7105    :Enter a percentage of maximum price (0-100).
+STR_7106    :Maximum funding (2x)
+STR_7107    :Maximum funding (3x)
+STR_7108    :Maximum funding (4x)
+STR_7109    :Maximum funding (5x)
+STR_7110    :Maximum funding (6x)
+STR_7111    :Maximum funding (7x)
+STR_7112    :Maximum funding (8x)
+STR_7113    :Maximum funding (9x)
+STR_7114    :Maximum funding (10x)
+STR_7115    :{UINT16}%

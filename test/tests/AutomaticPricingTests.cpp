@@ -42,6 +42,7 @@ protected:
         getGameState().park.flags = { ParkFlag::freeEntry };
         getGameState().park.entranceFee = 0;
         getGameState().cheats.automaticPricing = true;
+        getGameState().cheats.automaticPricingPercent = 100;
     }
 
     Ride* AddRide(std::string_view objectId)
@@ -237,4 +238,101 @@ TEST_F(AutomaticPricingTests, PersistsAndDefaultsOffForOlderSaves)
     cheats.automaticPricing = true;
     CheatsReset();
     EXPECT_FALSE(cheats.automaticPricing);
+}
+
+TEST_F(AutomaticPricingTests, PercentageAppliesImmediatelyToRidesShopsPhotosAndToilets)
+{
+    auto& state = getGameState();
+    ASSERT_NE(context->GetObjectManager().LoadObject(ObjectEntryDescriptor("rct2.climate.cool_and_wet"), 0), nullptr);
+    auto* ride = AddRide("rct2.ride.fwh1");
+    auto* shop = AddRide("rct2.ride.drnks");
+    auto* toilets = AddRide("rct2.ride.tlt1");
+    ASSERT_NE(ride, nullptr);
+    ASSERT_NE(shop, nullptr);
+    ASSERT_NE(toilets, nullptr);
+    ride->value = 7.10_GBP;
+    ride->flags.set(RideFlag::onRidePhoto);
+    const auto shopMax = GetShopItemDescriptor(ShopItem::drink).GetValue();
+    const auto photoMax = GetShopItemDescriptor(ride->getRideTypeDescriptor().PhotoItem).GetValue();
+    for (const int percent : { 0, 20, 50, 100 })
+    {
+        GameActions::CheatSetAction action(CheatType::automaticPricingPercent, percent);
+        ASSERT_EQ(action.Query(state, state.park).error, GameActions::Status::ok);
+        ASSERT_EQ(action.Execute(state, state.park).error, GameActions::Status::ok);
+        EXPECT_EQ(ride->price[0], 14.20_GBP * percent / 100);
+        EXPECT_EQ(shop->price[0], shopMax * percent / 100);
+        EXPECT_EQ(ride->price[1], photoMax * percent / 100);
+        EXPECT_EQ(toilets->price[0], 0.10_GBP * percent / 100);
+    }
+}
+
+TEST_F(AutomaticPricingTests, DiscountUsesCappedMaximumAndContinuesRefreshing)
+{
+    auto& state = getGameState();
+    auto* ride = AddRide("rct2.ride.fwh1");
+    ASSERT_NE(ride, nullptr);
+    ride->value = 10000.00_GBP;
+    GameActions::CheatSetAction half(CheatType::automaticPricingPercent, 50);
+    ASSERT_EQ(half.Execute(state, state.park).error, GameActions::Status::ok);
+    EXPECT_EQ(ride->price[0], kRideMaxPrice / 2);
+    ride->value = 3.00_GBP;
+    state.currentTicks = 128;
+    CheatsUpdateAutomaticPrices();
+    EXPECT_EQ(ride->price[0], 3.00_GBP);
+    ride->value = 2.00_GBP;
+    state.currentTicks = 256;
+    CheatsUpdateAutomaticPrices();
+    EXPECT_EQ(ride->price[0], 2.00_GBP);
+}
+
+TEST_F(AutomaticPricingTests, PercentageValidationAndDisabledPricingDoNotChangePrices)
+{
+    auto& state = getGameState();
+    auto* ride = AddRide("rct2.ride.fwh1");
+    ASSERT_NE(ride, nullptr);
+    ride->value = 3.00_GBP;
+    ride->price[0] = 1.20_GBP;
+    state.cheats.automaticPricing = false;
+    GameActions::CheatSetAction half(CheatType::automaticPricingPercent, 50);
+    ASSERT_EQ(half.Execute(state, state.park).error, GameActions::Status::ok);
+    EXPECT_EQ(ride->price[0], 1.20_GBP);
+    for (const int percent : { -1, 101 })
+    {
+        GameActions::CheatSetAction invalid(CheatType::automaticPricingPercent, percent);
+        EXPECT_NE(invalid.Query(state, state.park).error, GameActions::Status::ok);
+        EXPECT_NE(invalid.Execute(state, state.park).error, GameActions::Status::ok);
+    }
+    EXPECT_EQ(state.cheats.automaticPricingPercent, 50);
+    GameActions::CheatSetAction enable(CheatType::automaticPricing, 1);
+    ASSERT_EQ(enable.Execute(state, state.park).error, GameActions::Status::ok);
+    EXPECT_EQ(ride->price[0], 3.00_GBP);
+}
+
+TEST_F(AutomaticPricingTests, PercentagePersistsAndOlderSavesDefaultToFullPrice)
+{
+    auto& cheats = getGameState().cheats;
+    for (const uint8_t percent : { 0, 20, 50, 100 })
+    {
+        cheats.automaticPricingPercent = percent;
+        MemoryStream stream;
+        DataSerialiser writer(true, stream);
+        CheatsSerialise(writer);
+        cheats.automaticPricingPercent = 37;
+        stream.SetPosition(0);
+        DataSerialiser reader(false, stream);
+        CheatsSerialise(reader);
+        EXPECT_EQ(cheats.automaticPricingPercent, percent);
+    }
+    MemoryStream stream;
+    DataSerialiser writer(true, stream);
+    writer << uint16_t{ 1 } << static_cast<int32_t>(CheatType::automaticPricing) << true;
+    cheats.automaticPricingPercent = 20;
+    stream.SetPosition(0);
+    DataSerialiser reader(false, stream);
+    CheatsSerialise(reader);
+    EXPECT_TRUE(cheats.automaticPricing);
+    EXPECT_EQ(cheats.automaticPricingPercent, 100);
+    cheats.automaticPricingPercent = 20;
+    CheatsReset();
+    EXPECT_EQ(cheats.automaticPricingPercent, 100);
 }

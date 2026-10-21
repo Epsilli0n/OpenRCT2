@@ -28,6 +28,7 @@
 #include "../world/tile_element/SurfaceElement.h"
 #include "../world/tile_element/TileElement.h"
 #include "../world/tile_element/TrackElement.h"
+#include "CapacityOverride.h"
 #include "Ride.h"
 #include "RideData.h"
 #include "Track.h"
@@ -895,9 +896,9 @@ namespace OpenRCT2
         for (Vehicle* vehicle = getGameState().entities.getEntity<Vehicle>(id); vehicle != nullptr;
              vehicle = getGameState().entities.getEntity<Vehicle>(vehicle->next_vehicle_on_train))
         {
-            for (int32_t i = 0; i < vehicle->num_peeps; ++i)
+            for (auto passenger : CapacityOverride::Passengers(*vehicle))
             {
-                auto* curPeep = getGameState().entities.getEntity<Guest>(vehicle->peep[i]);
+                auto* curPeep = getGameState().entities.getEntity<Guest>(passenger);
                 if (curPeep != nullptr && curPeep->peepFlags.has(PeepFlag::hereWeAre))
                 {
                     curPeep->insertNewThought(PeepThoughtType::hereWeAre, curPeep->currentRide);
@@ -1283,7 +1284,7 @@ namespace OpenRCT2
         for (const Vehicle* vehicle = getGameState().entities.getEntity<Vehicle>(id); vehicle != nullptr;
              vehicle = getGameState().entities.getEntity<Vehicle>(vehicle->next_vehicle_on_train))
         {
-            numPeeps += vehicle->num_peeps;
+            numPeeps += CapacityOverride::BoardedCount(*vehicle);
         }
 
         return numPeeps;

@@ -33,6 +33,7 @@ struct CheatsState
     bool ignorePrice;
     bool disableGuestCrowding;
     bool automaticPricing;
+    uint8_t automaticPricingPercent = 100;
     bool smartGuestNavigation;
     bool smartHandymanDispatch;
     bool disableVandalism;
@@ -116,6 +117,8 @@ enum class CheatType : int32_t
     automaticPricing,
     smartGuestNavigation,
     smartHandymanDispatch,
+    setRideCapacity,
+    automaticPricingPercent,
     count,
 };
 

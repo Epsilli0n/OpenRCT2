@@ -49,7 +49,7 @@
 
 constexpr uint8_t kStreamVersion = 1;
 
-const std::string kStreamID = std::string(kOpenRCT2Version) + "-" + std::to_string(kStreamVersion) + "-smart-navigation-2";
+const std::string kStreamID = std::string(kOpenRCT2Version) + "-" + std::to_string(kStreamVersion) + "-custom-economy-1";
 
 static OpenRCT2::Peep* _pickup_peep = nullptr;
 static int32_t _pickup_peep_old_x = kLocationNull;

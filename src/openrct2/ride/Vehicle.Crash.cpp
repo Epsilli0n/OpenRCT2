@@ -28,6 +28,7 @@
 #include "../windows/Intent.h"
 #include "../world/Map.h"
 #include "../world/tile_element/TileElement.h"
+#include "CapacityOverride.h"
 #include "Ride.h"
 #include "VehicleGeometry.h"
 
@@ -330,15 +331,17 @@ void Vehicle::KillAllPassengersInTrain()
 
 void Vehicle::KillPassengers(const Ride& curRide)
 {
-    if (num_peeps != next_free_seat)
+    if (CapacityOverride::BoardedCount(*this) != CapacityOverride::ReservedCount(*this))
         return;
 
-    if (num_peeps == 0)
+    if (CapacityOverride::BoardedCount(*this) == 0)
         return;
 
-    for (auto i = 0; i < num_peeps; i++)
+    auto passengers = CapacityOverride::Passengers(*this);
+    CapacityOverride::ForgetVehicle(id);
+    for (auto passenger : passengers)
     {
-        auto* curPeep = getGameState().entities.getEntity<Guest>(peep[i]);
+        auto* curPeep = getGameState().entities.getEntity<Guest>(passenger);
         if (curPeep == nullptr)
             continue;
 

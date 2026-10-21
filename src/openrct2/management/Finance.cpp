@@ -125,16 +125,21 @@ void FinancePayWages()
  * Pays the current research level's cost.
  * rct2: 0x00684DA5
  **/
+money64 FinanceGetResearchFundingCost()
+{
+    const auto& gameState = getGameState();
+    return kResearchCosts[gameState.researchFundingLevel] * ResearchGetFundingMultiplier(gameState);
+}
+
 void FinancePayResearch()
 {
     const auto& gameState = getGameState();
-    if (getGameState().park.flags.has(ParkFlag::noMoney))
+    if (gameState.park.flags.has(ParkFlag::noMoney))
     {
         return;
     }
 
-    const uint8_t level = gameState.researchFundingLevel;
-    FinancePayment(kResearchCosts[level] / 4, ExpenditureType::research);
+    FinancePayment(FinanceGetResearchFundingCost() / 4, ExpenditureType::research);
 }
 
 /**
@@ -275,8 +280,7 @@ void FinanceUpdateDailyProfit()
         }
 
         // Research costs
-        uint8_t level = gameState.researchFundingLevel;
-        current_profit -= kResearchCosts[level];
+        current_profit -= FinanceGetResearchFundingCost();
 
         // Loan costs
         auto current_loan = park.bankLoan;

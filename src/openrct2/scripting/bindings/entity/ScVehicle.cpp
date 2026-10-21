@@ -562,6 +562,13 @@ namespace OpenRCT2::Scripting
     {
         auto result = JS_NewArray(ctx);
         auto vehicle = GetVehicle(thisVal);
+        if (vehicle != nullptr && CapacityOverride::HasManifest(*vehicle))
+        {
+            uint32_t index = 0;
+            for (auto guest : CapacityOverride::Passengers(*vehicle))
+                JS_SetPropertyUint32(ctx, result, index++, JS_NewUint32(ctx, guest.ToUnderlying()));
+            return result;
+        }
         if (vehicle != nullptr)
         {
             size_t len = 0;

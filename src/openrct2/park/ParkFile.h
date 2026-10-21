@@ -21,6 +21,10 @@ namespace OpenRCT2
     // Current version that is saved.
     constexpr uint32_t kParkFileCurrentVersion = 63;
 
+    // Custom capacity manifests cannot be safely ignored by a stock build. Keep the
+    // upstream target version for normal migrations, but require this variant to load.
+    constexpr uint32_t kParkFileCapacityOverrideMinVersion = 0x43415041;
+
     // The minimum version that is forwards compatible with the current version.
     constexpr uint32_t kParkFileMinVersion = 57;
 

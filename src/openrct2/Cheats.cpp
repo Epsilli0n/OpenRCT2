@@ -93,6 +93,8 @@ void CheatsUpdateAutomaticPrices(bool force)
         bool changed = false;
         auto setPrice = [&](size_t index, money64 price) {
             price = std::clamp(price, kRideMinPrice, kRideMaxPrice);
+            // Round down in the game's money units so a discount never exceeds its target.
+            price = price * gameState.cheats.automaticPricingPercent / 100;
             if (ride.price[index] != price)
             {
                 ride.price[index] = price;
@@ -152,6 +154,7 @@ void CheatsReset()
     gameState.cheats.ignorePrice = false;
     gameState.cheats.disableGuestCrowding = false;
     gameState.cheats.automaticPricing = false;
+    gameState.cheats.automaticPricingPercent = 100;
     gameState.cheats.smartGuestNavigation = false;
     gameState.cheats.smartHandymanDispatch = false;
     SmartPathfinding::Reset(gameState);
@@ -233,6 +236,7 @@ void CheatsSerialise(DataSerialiser& ds)
         CheatEntrySerialise(ds, CheatType::setForcedParkRating, gameState.cheats.forcedParkRating, count);
         CheatEntrySerialise(ds, CheatType::disableGuestCrowding, gameState.cheats.disableGuestCrowding, count);
         CheatEntrySerialise(ds, CheatType::automaticPricing, gameState.cheats.automaticPricing, count);
+        CheatEntrySerialise(ds, CheatType::automaticPricingPercent, gameState.cheats.automaticPricingPercent, count);
         CheatEntrySerialise(ds, CheatType::smartGuestNavigation, gameState.cheats.smartGuestNavigation, count);
         CheatEntrySerialise(ds, CheatType::smartHandymanDispatch, gameState.cheats.smartHandymanDispatch, count);
 
@@ -250,6 +254,7 @@ void CheatsSerialise(DataSerialiser& ds)
         // Older saves do not contain this cheat.
         gameState.cheats.disableGuestCrowding = false;
         gameState.cheats.automaticPricing = false;
+        gameState.cheats.automaticPricingPercent = 100;
         gameState.cheats.smartGuestNavigation = false;
         gameState.cheats.smartHandymanDispatch = false;
         SmartPathfinding::Reset(gameState);
@@ -308,6 +313,10 @@ void CheatsSerialise(DataSerialiser& ds)
                     break;
                 case CheatType::automaticPricing:
                     ds << gameState.cheats.automaticPricing;
+                    break;
+                case CheatType::automaticPricingPercent:
+                    ds << gameState.cheats.automaticPricingPercent;
+                    gameState.cheats.automaticPricingPercent = std::min<uint8_t>(gameState.cheats.automaticPricingPercent, 100);
                     break;
                 case CheatType::smartGuestNavigation:
                     ds << gameState.cheats.smartGuestNavigation;
@@ -416,10 +425,14 @@ const char* CheatsGetName(CheatType cheatType)
             return LanguageGetString(STR_CHEAT_DISABLE_GUEST_CROWDING);
         case CheatType::automaticPricing:
             return LanguageGetString(STR_CHEAT_AUTOMATIC_PRICING);
+        case CheatType::automaticPricingPercent:
+            return LanguageGetString(STR_CHEAT_PRICING_PERCENT);
         case CheatType::smartGuestNavigation:
             return LanguageGetString(STR_CHEAT_SMART_GUEST_NAVIGATION);
         case CheatType::smartHandymanDispatch:
             return LanguageGetString(STR_CHEAT_SMART_HANDYMAN_DISPATCH);
+        case CheatType::setRideCapacity:
+            return LanguageGetString(STR_CHEAT_COASTER_CAPACITY);
         case CheatType::noMoney:
             return LanguageGetString(STR_MAKE_PARK_NO_MONEY);
         case CheatType::addMoney:

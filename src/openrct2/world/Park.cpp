@@ -292,6 +292,7 @@ namespace OpenRCT2::Park
             ResearchCategory::transport, ResearchCategory::gentle, ResearchCategory::rollercoaster, ResearchCategory::thrill,
             ResearchCategory::water, ResearchCategory::shop, ResearchCategory::sceneryGroup);
         gameState.researchFundingLevel = RESEARCH_FUNDING_NORMAL;
+        gameState.researchFundingMultiplier = 1;
 
         gameState.scenarioOptions.guestInitialCash = 50.00_GBP;
         gameState.scenarioOptions.guestInitialHappiness = CalculateGuestInitialHappiness(50);
