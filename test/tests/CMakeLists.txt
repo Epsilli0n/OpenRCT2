@@ -9,6 +9,7 @@ install(CODE "execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink \"\
 set(test_files
    "${CMAKE_CURRENT_SOURCE_DIR}/AssertHelpers.hpp"
    "${CMAKE_CURRENT_SOURCE_DIR}/AutomaticPricingTests.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/SendGuestsHomeTests.cpp"
    "${CMAKE_CURRENT_SOURCE_DIR}/ResearchFundingTests.cpp"
    "${CMAKE_CURRENT_SOURCE_DIR}/CapacityOverrideTests.cpp"
    "${CMAKE_CURRENT_SOURCE_DIR}/SmartPathfindingTests.cpp"

@@ -456,7 +456,6 @@ namespace OpenRCT2
     static PeepThoughtType GuestAssessSurroundings(int16_t centre_x, int16_t centre_y, int16_t centre_z);
     static void GuestUpdateHunger(Guest& guest);
     static void GuestDecideWhetherToLeavePark(Guest& guest);
-    static void GuestLeavePark(Guest& guest);
     static void GuestHeadForNearestRideWithFlag(Guest& guest, bool considerOnlyCloseRides, RtdFlag rtdFlag);
     static void GuestHeadForNearestRideWithSpecialType(Guest& guest, bool considerOnlyCloseRides, RtdSpecialType specialType);
     static bool Loc690FD0(Guest& guest, RideId* rideToView, uint8_t* rideSeatToView, TileElement* tileElement);
@@ -967,7 +966,7 @@ namespace OpenRCT2
                 if (guestHeadingToRideId.IsNull())
                 {
                     happinessTarget = std::max(happinessTarget - 128, 0);
-                    GuestLeavePark(*this);
+                    headForParkExit();
                     GuestUpdateHunger(*this);
                     updateMotivesIdle();
                     updateConsumptionMotives();
@@ -3053,37 +3052,37 @@ namespace OpenRCT2
         }
 
         // In the remaining 5% chance the peep leaves the park.
-        GuestLeavePark(guest);
+        guest.headForParkExit();
     }
 
     /**
      *
      *  rct2: 0x0068F93E
      */
-    static void GuestLeavePark(Guest& guest)
+    void Guest::headForParkExit()
     {
-        guest.guestHeadingToRideId = RideId::GetNull();
-        if (guest.peepFlags.has(PeepFlag::leavingPark))
+        guestHeadingToRideId = RideId::GetNull();
+        if (peepFlags.has(PeepFlag::leavingPark))
         {
-            if (guest.guestIsLostCountdown < 60)
+            if (guestIsLostCountdown < 60)
             {
                 return;
             }
         }
         else
         {
-            guest.guestIsLostCountdown = 254;
-            guest.peepFlags.set(PeepFlag::leavingPark);
-            guest.peepFlags.unset(PeepFlag::parkEntranceChosen);
+            guestIsLostCountdown = 254;
+            peepFlags.set(PeepFlag::leavingPark);
+            peepFlags.unset(PeepFlag::parkEntranceChosen);
         }
 
-        guest.insertNewThought(PeepThoughtType::goHome);
+        insertNewThought(PeepThoughtType::goHome);
 
         auto* windowMgr = Ui::GetWindowManager();
-        WindowBase* w = windowMgr->FindByNumber(WindowClass::peep, guest.id);
+        WindowBase* w = windowMgr->FindByNumber(WindowClass::peep, id);
         if (w != nullptr)
             w->onPrepareDraw();
-        windowMgr->InvalidateByNumber(WindowClass::peep, guest.id);
+        windowMgr->InvalidateByNumber(WindowClass::peep, id);
     }
 
     template<typename T>

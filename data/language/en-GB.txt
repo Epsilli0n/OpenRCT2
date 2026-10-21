@@ -3908,3 +3908,5 @@ STR_7112    :Maximum funding (8x)
 STR_7113    :Maximum funding (9x)
 STR_7114    :Maximum funding (10x)
 STR_7115    :{UINT16}%
+STR_7116    :Send all guests home
+STR_7117    :Makes all guests currently in the park want to leave, without changing happiness or other stats. Guests already boarding or riding finish before heading home.

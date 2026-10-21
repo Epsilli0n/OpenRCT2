@@ -359,6 +359,7 @@ namespace OpenRCT2
         bool hasEmptyContainer() const;
         void updateAnimationGroup();
         bool headingForRideOrParkExit() const;
+        void headForParkExit();
         void readMap();
         bool shouldGoOnRide(Ride& ride, StationIndex entranceNum, bool atQueue, bool thinking);
         void spendMoney(money64& peep_expend_type, money64 amount, ExpenditureType type);

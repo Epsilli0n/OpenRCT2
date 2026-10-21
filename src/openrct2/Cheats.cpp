@@ -445,6 +445,8 @@ const char* CheatsGetName(CheatType cheatType)
             return LanguageGetString(STR_CHEAT_LARGE_TRAM_GUESTS);
         case CheatType::removeAllGuests:
             return LanguageGetString(STR_CHEAT_REMOVE_ALL_GUESTS);
+        case CheatType::sendAllGuestsHome:
+            return LanguageGetString(STR_CHEAT_SEND_ALL_GUESTS_HOME);
         case CheatType::giveAllGuests:
             return LanguageGetString(STR_CHEAT_GIVE_ALL_GUESTS);
         case CheatType::setGrassLength:

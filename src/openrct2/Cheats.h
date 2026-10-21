@@ -119,6 +119,7 @@ enum class CheatType : int32_t
     smartHandymanDispatch,
     setRideCapacity,
     automaticPricingPercent,
+    sendAllGuestsHome,
     count,
 };
 

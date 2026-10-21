@@ -102,6 +102,7 @@
     <ClCompile Include="RideRatings.cpp" />
     <ClCompile Include="EntityImportTests.cpp" />
     <ClCompile Include="AutomaticPricingTests.cpp" />
+    <ClCompile Include="SendGuestsHomeTests.cpp" />
     <ClCompile Include="ResearchFundingTests.cpp" />
     <ClCompile Include="CapacityOverrideTests.cpp" />
     <ClCompile Include="SmartPathfindingTests.cpp" />

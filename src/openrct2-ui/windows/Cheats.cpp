@@ -223,6 +223,7 @@ enum WindowCheatsWidgetIdx : WidgetIndex
     WIDX_CAPACITY_APPLY,
     WIDX_CAPACITY_DEFAULT,
     WIDX_CAPACITY_HELP,
+    WIDX_SEND_ALL_GUESTS_HOME,
 };
 
 #pragma region MEASUREMENTS
@@ -396,7 +397,8 @@ static constexpr auto window_cheats_custom_widgets = makeWidgets(
     makeHoldableSpinnerWidgets({120, 210}, kCheatSpinnerSize, WidgetType::spinner, WindowColour::secondary),
     makeWidget({ 11, 232}, kCheatButtonSize, WidgetType::button, WindowColour::secondary, STR_CHEAT_CAPACITY_APPLY),
     makeWidget({127, 232}, kCheatButtonSize, WidgetType::button, WindowColour::secondary, STR_CHEAT_CAPACITY_DEFAULT),
-    makeWidget({ 11, 256}, {226, 40}, WidgetType::label, WindowColour::secondary)
+    makeWidget({ 11, 256}, {226, 40}, WidgetType::label, WindowColour::secondary),
+    makeWidget({ 11, 310}, {226, 17}, WidgetType::button, WindowColour::secondary, STR_CHEAT_SEND_ALL_GUESTS_HOME, STR_CHEAT_SEND_ALL_GUESTS_HOME_TIP)
 );
 
 static constexpr std::span<const Widget> window_cheats_page_widgets[] =
@@ -1401,6 +1403,9 @@ static StringId window_cheats_page_titles[] = {
             const auto& cheats = getGameState().cheats;
             switch (widgetIndex)
             {
+                case WIDX_SEND_ALL_GUESTS_HOME:
+                    CheatsSet(CheatType::sendAllGuestsHome);
+                    break;
                 case WIDX_PRICING_PERCENT:
                     WindowTextInputRawOpen(
                         this, WIDX_PRICING_PERCENT, STR_CHEAT_AUTOMATIC_PRICING, STR_CHEAT_PRICING_PERCENT_INPUT, {},

@@ -222,6 +222,28 @@ namespace OpenRCT2::GameActions
             case CheatType::removeAllGuests:
                 RemoveAllGuests(gameState);
                 break;
+            case CheatType::sendAllGuestsHome:
+                for (auto* guest : EntityList<Guest>())
+                {
+                    if (guest->outsideOfPark)
+                        continue;
+
+                    guest->headForParkExit();
+                    guest->resetPathfindGoal();
+                    guest->peepFlags.unset(PeepFlag::parkEntranceChosen);
+                    guest->windowInvalidateFlags |= PEEP_INVALIDATE_PEEP_ACTION;
+
+                    // Leave queues normally, but let guests already boarding or riding finish safely.
+                    if (guest->state == PeepState::queuing)
+                    {
+                        guest->orientation ^= (1 << 4);
+                        guest->invalidate();
+                        guest->removeFromQueue();
+                        guest->setState(PeepState::one);
+                    }
+                }
+                windowMgr->InvalidateByClass(WindowClass::guestList);
+                break;
             case CheatType::giveAllGuests:
                 GiveObjectToGuests(_param1);
                 break;
@@ -462,6 +484,8 @@ namespace OpenRCT2::GameActions
             case CheatType::clearLoan:
                 [[fallthrough]];
             case CheatType::removeAllGuests:
+                [[fallthrough]];
+            case CheatType::sendAllGuestsHome:
                 [[fallthrough]];
             case CheatType::ownAllLand:
                 [[fallthrough]];
