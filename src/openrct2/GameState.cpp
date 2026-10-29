@@ -339,7 +339,7 @@ namespace OpenRCT2
             CheatsUpdateAutomaticPrices();
         }
         RideMeasurementsUpdate();
-        News::UpdateCurrentItem(park.newsItems);
+        park.newsItems.updateActiveItem();
 
         MapAnimations::InvalidateAndUpdateAll();
         VehicleSoundsUpdate();
